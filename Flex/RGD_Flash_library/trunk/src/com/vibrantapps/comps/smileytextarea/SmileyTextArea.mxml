@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (c) 2007 vibrant apps
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:local="*" initialize="init()" creationComplete="complete()" backgroundAlpha="0"
+		   backgroundColor="#ffffff" alpha="1">
+
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.Alert;
+			import mx.controls.SWFLoader;
+			import mx.events.ResizeEvent;
+			import mx.events.ScrollEvent;
+	        
+			private var visibleSmileys:Array = new Array();	//and visible in current view
+			private var currentVisibleLines:int;			//and how many are visible?
+			private var currentLine:int = 0;
+			private var smileyHolder:Sprite = new Sprite();
+			private var smileyMask:Sprite;
+
+			private var smileyHeight:Number;	
+			private var smileyWidths:Array = new Array();		//width of smileys
+			private var smileyScaleFactor:Number = 1;			///scale factor
+			private var lineHeight:Number;
+			private var textFieldWidth:Number=0;
+			private var textHistory:Array = new Array();
+			private var lastScrollPosition:int =0;
+			private var smileyTextProcessor:SmileyTextProcessor;
+			public var maxHistoryLength:int = 25;
+			
+			private var _htmlText:String;
+
+			private function init():void
+			{
+				textArea.scaleX = 1;
+				textArea.scaleY = 1;
+				currentLine = 0;	
+			
+				//get initial sizes
+				calculateSmileyDimensions();
+				
+				prepareSprites();
+				//Set up our measurement metrics here
+				var metrics:TextLineMetrics = textArea.measureHTMLText("Wq");
+				lineHeight =  metrics.height;
+				smileyScaleFactor = metrics.ascent / smileyHeight;
+				currentVisibleLines = Math.floor((textArea.height + metrics.leading) / (lineHeight + metrics.leading) + 1);
+				textFieldWidth = textArea.width - 20;
+				
+				//initialise our smileys and containers
+				smileyUIComp.addChild(smileyMask);
+				smileyUIComp.addChild(smileyHolder);
+				draw(smileyMask,0xff00ff, 0,0,textFieldWidth,textArea.height);
+				
+				//and create a smileytext object to process our html text strings
+				smileyTextProcessor = new SmileyTextProcessor(textArea, smileyWidths, smileyScaleFactor);
+			}
+			
+			/*
+			* updates the uicomponent and sprite mask to be correct size for the text area
+			*/
+			
+			private function prepareSprites() : void {
+				textFieldWidth = textArea.width - 20;
+				if (smileyMask !=null) {
+					smileyUIComp.removeChild(smileyMask);
+					smileyHolder.mask=null;
+					smileyMask=null;
+				}
+	
+				smileyMask = new Sprite();
+				smileyUIComp.addChild(smileyMask);
+				draw(smileyMask,0xff00ff, 0,0,textFieldWidth,textArea.height);
+				smileyHolder.mask=smileyMask;
+				smileyMask.width=textFieldWidth;
+				smileyMask.height=textArea.height;
+				smileyUIComp.addChild(smileyHolder);
+				smileyHolder.x=0;
+				smileyHolder.y=0;
+				
+				var metrics:TextLineMetrics = textArea.measureHTMLText("Wq");
+				lineHeight =  metrics.height;
+				smileyScaleFactor = metrics.ascent / smileyHeight;
+				currentVisibleLines = Math.floor((textArea.height + metrics.leading) / (lineHeight + metrics.leading) + 1);
+			}
+			
+			/*
+			* Add each smiley to stage, measure, store dimensions and remove
+			* the calculation here is, shall we say, simple to say the least.. 
+			*/
+			private function calculateSmileyDimensions() : void {
+				var totalSmileys:int=Smileys.smileyCodes.length;
+				var tempSprite:Sprite;
+				var spriteClass:Class;
+				for (var i:int=0; i <totalSmileys; i++ )
+				{
+			 		tempSprite = new Smileys.smileys[i];
+					smileyHolder.addChild(tempSprite);
+					smileyWidths[i] = tempSprite.width -2;
+					if (i == 0) smileyHeight = tempSprite.height -2;
+					smileyHolder.removeChild(tempSprite);
+				}
+			}
+			
+			//helper method to knock up a rectangle
+			private function draw(sprite:Sprite, col:uint, x:Number, y:Number, w:Number, h:Number) : void {
+		      sprite.graphics.beginFill(col);
+		      sprite.graphics.drawRect(x, y, w, h);
+		      sprite.graphics.endFill();
+		    }
+			
+			//redraw smileys that should be visible now
+			private function updateSmileys(event:ScrollEvent):void
+			{
+				//quick check to avoid a component bug
+				var min:Number, max:Number;
+				if (event==null) {
+					min = lastScrollPosition;
+				} else {
+					if (event.position==lastScrollPosition) return;
+					if (event.position>textArea.maxVerticalScrollPosition) {
+						min = textArea.maxVerticalScrollPosition;
+					} else {
+						min = event.position;
+					}
+					lastScrollPosition = min;
+				}
+				
+				max = (currentLine < currentVisibleLines ? currentLine : min + currentVisibleLines);	
+				var i:Number, j:Number;
+				var movedSmileys:Array = new Array(max - min); //keeps track of smileys that have moved since
+				
+				calculateVisibleSmileys(movedSmileys, min, max);
+				addNewSmileys(movedSmileys, min, max);
+				//now display our visible smileys
+			}
+			
+			private function addNewSmileys(movedSmileys:Array, min:int, max:int) : void {
+				var tempSprite:Sprite;
+				for (var i:int = min; i <= max; i++)
+				{
+					if (smileyTextProcessor.activeSmileys[i] != undefined && !movedSmileys[i - min])
+					{	
+						for(var j:int = 0; j < smileyTextProcessor.activeSmileys[i].length; j++)
+						{	
+							var total:int = 0;
+							while (visibleSmileys[total] != undefined)
+								total++;
+								tempSprite = new smileyTextProcessor.activeSmileys[i][j].swf();
+								smileyHolder.addChild(tempSprite);
+								tempSprite.name = "smiles_tmp_" + total;
+								tempSprite.x = textArea.x + (smileyTextProcessor.activeSmileys[i][j].x + (10*smileyScaleFactor)); 
+				  				if (i == 0)
+					  				tempSprite.y = 4;
+					  			else
+					  			tempSprite.y = (((i - min)* lineHeight) + 5);
+				  				tempSprite.scaleX = smileyScaleFactor;
+				  				tempSprite.scaleY = smileyScaleFactor;
+								visibleSmileys[total] = {
+									swf:		tempSprite,
+									lineNumber:	i	
+								}
+							}
+					}
+				}
+			}
+			
+			//works out which smileys should be displayed
+			//returns an array of all visible smileys whih need checking
+			private function calculateVisibleSmileys(movedSmileys:Array, min:int, max:int) : void {
+				var l:Number=visibleSmileys.length;
+				for (var i:int = 0; i < visibleSmileys.length; i++)
+				{
+					if (visibleSmileys[i] != undefined)
+					{
+						if (visibleSmileys[i].lineNumber < min || visibleSmileys[i].lineNumber > max)
+						{ 
+							//remove this smiley from the visible list
+							smileyHolder.removeChild(visibleSmileys[i].swf);
+							visibleSmileys.splice(i, 1);
+							l--;
+							i--;
+						}
+						else
+						{ 
+							//place smiley at correct y
+							movedSmileys[visibleSmileys[i].lineNumber - min] = true;
+							visibleSmileys[i].swf.y = ((visibleSmileys[i].lineNumber - min) * lineHeight) + 5;
+
+						}
+					}
+				}
+			}
+			
+			private function scrollBody():void
+			{
+				textArea.verticalScrollPosition = textArea.maxVerticalScrollPosition + 2;
+				updateSmileys(null);				
+			}
+			
+			private function doScroll(event:ScrollEvent):void
+			{
+				updateSmileys(event);
+			}
+			
+			private function scrollToEnd(event:Event):void
+			{
+				textArea.verticalScrollPosition = textArea.maxVerticalScrollPosition + 1;
+				
+			}
+			
+			public function addText(p_text:String) :void {
+				_htmlText = p_text;
+				var newCurrentLine:int = smileyTextProcessor.processHtmlString(p_text);
+				if (newCurrentLine != -1) currentLine = newCurrentLine;
+				updateSmileys(null);
+				textHistory.push(p_text);
+				if (textHistory.length>maxHistoryLength) textHistory.shift();
+			}
+			
+			public function clear(clearHistory:Boolean=true):void {
+				if (textArea == null) return;
+				textArea.htmlText="";
+				currentLine = 0;	
+				lastScrollPosition=0;
+				
+				//remove all elements
+				var l:Number = visibleSmileys.length;
+				for (var i:Number=0; i<l; i++) {
+					smileyHolder.removeChild(visibleSmileys[i].swf);	
+				}
+				l = smileyTextProcessor.activeSmileys.length;
+
+				smileyTextProcessor = new SmileyTextProcessor(textArea, smileyWidths, smileyScaleFactor);
+				visibleSmileys = new Array();
+				
+				if (clearHistory) textHistory= new Array();
+				textArea.verticalScrollPosition = textArea.maxVerticalScrollPosition;
+			}
+			
+			private function doResize(event:ResizeEvent):void {
+				prepareSprites();
+				
+			
+				//clear the old text
+				clear(false);
+				//and recalculate the text
+				redoText();
+			}
+			
+			private function redoText() :void {
+				smileyTextProcessor = new SmileyTextProcessor(textArea, smileyWidths, smileyScaleFactor);
+				textArea.htmlText="";
+				var l:Number = textHistory.length;
+				for (var i:Number=0; i<l; i++) {
+					var newCurrentLine:int = smileyTextProcessor.processHtmlString(textHistory[i]);
+					if (newCurrentLine != -1) currentLine = newCurrentLine;
+				}	
+				updateSmileys(null);
+			}
+			
+			/*
+			* use this funciton to add more than on line
+			*/
+			public function addMutipleLines(multipleLinesOfText:Array) :void {
+				if (multipleLinesOfText==null) return;
+				var l:Number = multipleLinesOfText.length;
+
+				for (var i:Number=0; i<l; i++) {
+					var newCurrentLine:int = smileyTextProcessor.processHtmlString(textHistory[i]);
+					if (newCurrentLine != -1) currentLine = newCurrentLine;
+				}
+				textArea.verticalScrollPosition = textArea.maxVerticalScrollPosition + 2;	
+				updateSmileys(null);
+			}
+			
+			public function set htmlText(text_html:String):void {
+				_htmlText = text_html;
+			}
+			
+			public function get htmlText():String {
+				return _htmlText;
+			}
+			
+			public function complete():void {
+				if (_htmlText != null) {
+					clear();
+					addText(_htmlText);					
+				}
+			}			
+		]]>
+	</mx:Script>
+
+
+	<mx:TextArea id="textArea" x="0" y="0" width="{width}" height="{height}"
+		editable="false" resize="doResize(event)" backgroundAlpha="0" visible="false"/>
+	<mx:UIComponent id="smileyUIComp" width="{textArea.width}" height="{textArea.height}" x="{textArea.x}" 
+					y="{textArea.y}" visible="false"/>
+</mx:Canvas>
+

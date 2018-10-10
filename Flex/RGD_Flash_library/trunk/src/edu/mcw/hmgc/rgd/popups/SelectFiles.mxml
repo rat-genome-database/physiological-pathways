@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" 
+				layout="absolute" width="328" height="452" 
+				title="Choose File Name" 
+				xmlns:flexlib="http://code.google.com/p/flexlib/"
+				xmlns:popups="edu.mcw.hmgc.rgd.popups.*"
+				creationComplete="init()" backgroundColor="#EAE8E8" xmlns:controls="flexlib.controls.*">
+	<mx:Script>
+		<![CDATA[
+			import edu.mcw.hmgc.rgd.utils.DiagramLibrary;
+			
+			import mx.events.DataGridEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			
+			protected var _initFileName:String=null;
+			public function set initFileName(value:String):void
+			{
+				_initFileName = value;
+				if (_initFileName != null && fileNameInput != null)
+				{
+					fileNameInput.text = _initFileName;
+				}
+			}
+			
+			protected var _dataProvider:Object = null;
+			public function set dataProvider(provider:Object):void
+			{
+				_dataProvider = provider;
+				if (provider == null || existingFiles == null) return;
+				existingFiles.dataProvider = provider;
+				existingFiles.dispatchEvent(new DataGridEvent
+					(
+						DataGridEvent.HEADER_RELEASE,
+						false,
+						true,
+						0,	// The zero-based index of the column to sort in the DataGrid object's columns array.
+						null,
+						0,
+						null,
+						null,
+						0
+					)
+					);
+			}
+
+			protected var _nextFunction:Function = null;
+			public function set nextFunction(value:Function):void
+			{
+				_nextFunction = value;
+			}
+			
+			private var _showInputBox:Boolean = true;
+			[Bindable]
+			public function get showInputBox():Boolean
+			{
+				return _showInputBox;
+			}
+			public function set showInputBox(value:Boolean):void
+			{
+				_showInputBox = value;
+			}
+			
+			protected function init():void
+			{
+				if (_dataProvider != null) dataProvider = _dataProvider;
+				if (_initFileName != null) fileNameInput.text = _initFileName;
+			}
+
+			protected function list1_changeHandler(event:ListEvent):void
+			{
+				var file_name:String = existingFiles.selectedItem.@name[0].toString();
+				fileNameInput.text = file_name;
+			}
+
+			protected function buttonCancel_clickHandler(event:MouseEvent):void
+			{
+				closeWindow();
+			}
+
+			protected function closeWindow():void 
+			{
+				PopUpManager.removePopUp(this);
+			}
+
+			protected function buttonOK_clickHandler(event:MouseEvent):void
+			{
+				closeWindow();
+				doNext();
+			}
+
+			protected function doNext():void
+			{
+				if (_nextFunction != null)
+				{
+					_nextFunction(fileNameInput.text);
+				}
+			}
+
+			protected function existingFiles_doubleClickHandler(event:MouseEvent):void
+			{
+				if (event.currentTarget.selectedItem == null) return;
+				buttonOK.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+			}
+
+		]]>
+	</mx:Script>
+	<mx:VBox x="0" y="0" height="372" width="308" backgroundColor="#EAE8E8">
+		<mx:HBox width="100%" height="30" id="inputBox" visible="{showInputBox}" includeInLayout="{showInputBox}" backgroundColor="#EAE8E8">
+			<mx:Label text="File name:"/>
+			<controls:PromptingTextInput width="232" id="fileNameInput" prompt="File Name" fontFamily="Arial" fontSize="12" fontWeight="bold" color="#1004B9"/>
+		</mx:HBox>
+		<mx:VBox width="100%" height="100%" borderColor="#E8ECEE" backgroundColor="#EAE8E8">
+<!--			<mx:Label x="10" text="Existing files"/>
+			<mx:List id="existingFiles" x="10" y="281" width="100%" height="100%" borderStyle="inset" 
+					 change="list1_changeHandler(event)" labelField="@name" backgroundColor="#B0B1B1" 
+					 color="#000000" fontSize="12" fontWeight="bold" fontFamily="Arial" 
+					 doubleClick="existingFiles_doubleClickHandler(event)"
+					 doubleClickEnabled="true"></mx:List>
+-->
+			<mx:DataGrid id="existingFiles" sortableColumns="true"  
+						 x="10" y="281" width="100%" height="100%" borderStyle="inset" 
+						 change="list1_changeHandler(event)" backgroundColor="#B0B1B1" 
+						 color="#000000" fontSize="12" fontWeight="bold" fontFamily="Arial" 
+						 doubleClick="existingFiles_doubleClickHandler(event)"
+						 doubleClickEnabled="true">
+				<mx:columns>
+					<mx:DataGridColumn headerText="Existing files" dataField="@name">
+						
+					</mx:DataGridColumn>
+				</mx:columns>
+			</mx:DataGrid>
+		</mx:VBox>
+	</mx:VBox>
+	<mx:Button x="46" y="380" label="OK" id="buttonOK" width="60" click="buttonOK_clickHandler(event)"/>
+	<mx:Button x="210" y="380" label="Cancel" id="buttonCancel" click="buttonCancel_clickHandler(event)"/>
+	
+</mx:TitleWindow>

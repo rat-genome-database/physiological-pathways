@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" horizontalScrollPolicy="off"
+		   verticalScrollPolicy="off" alpha=".7" cornerRadius="20" borderColor="#254525" 
+		   dropShadowEnabled="true" dropShadowColor="#0" borderStyle="solid" borderThickness="2"
+		   width="10%" height="10%">
+<mx:Script>
+	<![CDATA[
+		
+		[Embed(source="/assets/images/rgd_logo_1.swf")]
+		[Bindable]
+		static public var logoCls:Class;
+		
+		private var _parentWidth:Number = width;
+		private var _parentHeight:Number = height;
+		private var _parentScaleX:Number = 1;
+		private var _parentScaleY:Number = 1;
+		static private var _logoRatio:Number = 0;
+		
+		public function get parentScaleY():Number
+		{
+			return _parentScaleY;
+		}
+
+		public function set parentScaleY(value:Number):void
+		{
+			_parentScaleY = value;
+			adjustSize();
+		}
+
+		public function get parentScaleX():Number
+		{
+			return _parentScaleX;
+		}
+
+		public function set parentScaleX(value:Number):void
+		{
+			_parentScaleX = value;
+			adjustSize();
+		}
+
+		[Bindable]
+		public function get parentHeight():Number
+		{
+			return _parentHeight;
+		}
+
+		public function set parentHeight(value:Number):void
+		{
+			_parentHeight = value;
+			adjustSize();
+		}
+
+		[Bindable]
+		public function get parentWidth():Number
+		{
+			return _parentWidth;
+		}
+
+		public function set parentWidth(value:Number):void
+		{
+			_parentWidth = value;
+			adjustSize();
+		}
+
+		public function adjustSize():void
+		{
+			if (_logoRatio == 0) 
+			{
+				if (!(imgLogo.contentWidth > 0) || !(imgLogo.contentHeight > 0)) return;
+				_logoRatio = imgLogo.contentWidth / imgLogo.contentHeight;
+			}
+			if (_parentWidth == 0 || _parentHeight == 0) return;
+			var desired_width:Number = .1 * _parentWidth / _parentScaleX;
+			var desired_height:Number = .1 * _parentHeight / _parentScaleY;
+			if (desired_width / desired_height > _logoRatio)
+			{
+				width = desired_height * _logoRatio;
+				height = desired_height;
+			} else
+			{
+				width = desired_width;
+				height = desired_width / _logoRatio;
+			}
+			
+			this.setStyle("horizontalCenter", (_parentWidth / _parentScaleX - width - 2)/2); 
+			this.setStyle("verticalCenter", (_parentHeight / _parentScaleY - height - 4)/2); 
+//			x = _parentWidth / _parentScaleX - width - 2;
+//			y = _parentHeight / _parentScaleY - height - 4; 
+		}
+		
+		public function get parentSize():Point
+		{
+			return new Point(width, height);
+		}
+	]]>
+</mx:Script>
+	<mx:Image id="imgLogo" source="{logoCls}" height="100%" width="100%" 
+			  horizontalAlign="center" verticalAlign="center"/>
+	
+</mx:Canvas>

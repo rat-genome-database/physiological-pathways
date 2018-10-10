@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" 
+		 xmlns:listClasses="mx.controls.listClasses.*" 
+		 xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*" backgroundAlpha="0"
+		 >
+	<mx:Script>
+		<![CDATA[
+			public override function get measuredWidth():Number
+			{
+				var measured_width:Number = textLabel.textWidth;
+				super.measuredWidth = measured_width;
+				return measured_width;
+			}
+		]]>
+	</mx:Script>
+	<controls:RasterTextLabel id="textLabel" fontColor="#000040" text="{data}" fontSize="12" height="{height-2}" fontWeight="bold">
+	</controls:RasterTextLabel>
+</mx:HBox>

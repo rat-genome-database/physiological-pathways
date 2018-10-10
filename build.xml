@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="PhysiologicalPathwayPortal" basedir="." default="buildall">
+    <!-- file description -->
+    <description>Build Script</description>
+
+    <!--location of property file -->
+    <property file="./build.properties"
+        description="properities for builds" />
+
+   <target name="clean">
+     <delete dir="${WAR_final_output.dir}" failOnError="false" includeEmptyDirs="true" />
+   </target>
+
+   <target name="flex_components">
+        <ant dir="${flex_components.dir}"/>
+   </target>
+
+   <target name="update_swf_files">
+        <copy todir="${java_components.dir}/${java_components_web.dir}" includeemptydirs="false" overwrite="true">
+          <fileset dir="${flex_components.dir}/${SWF_final_output.dir}"/>
+        </copy>
+   </target>
+
+   <target name="java_components">
+        <ant dir="${java_components.dir}"/>
+   </target>
+
+   <target name="get_war_file" depends="clean">
+     <mkdir dir="${WAR_final_output.dir}" />
+     <copy todir="${WAR_final_output.dir}" includeemptydirs="false" overwrite="true">
+	<fileset dir="${java_components.dir}/${WAR_output.dir}"/>
+    </copy>
+   </target>
+
+   <target name="buildall" depends="flex_components,update_swf_files,java_components,get_war_file"/>
+
+</project>
+

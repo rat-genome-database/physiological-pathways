@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BasicShape xmlns="edu.mcw.hmgc.rgd.diagrammer.shapes.*" 
+			xmlns:mx="http://www.adobe.com/2006/mxml"
+			xmlns:degrafa="com.degrafa.*" 
+			width="50" height="50" xmlns:degrafa1="http://www.degrafa.com/2007"
+			xmlns:rgd="edu.mcw.hmgc.rgd.graphics.*">
+	
+	<mx:Script>
+		<![CDATA[
+			import com.degrafa.GraphicImage;
+			import com.degrafa.Surface;
+			
+			import edu.mcw.hmgc.rgd.graphics.SVGImage;
+			import edu.mcw.hmgc.rgd.utils.ImageEntry;
+			import edu.mcw.hmgc.rgd.utils.StrUtil;
+			import edu.mcw.hmgc.rgd.utils.XMLUtils;
+			import edu.mcw.hmgc.rgd.utils.libraries.ImageLibrary;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.controls.Alert;
+			import mx.controls.Image;
+			import mx.controls.Text;
+			import mx.core.MovieClipLoaderAsset;
+			import mx.events.FlexEvent;
+			import mx.utils.Base64Decoder;
+			import mx.utils.ObjectUtil;
+			
+			import org.gif.player.GIFPlayer;
+			
+			private var _urlLoader:URLLoader;
+			private var _imageName:String = new String();
+			public var image:Image = new Image();
+
+			private var gifPlayer:GIFPlayer = new GIFPlayer();
+			
+			private var image_entry:ImageEntry;
+			
+			private var change:ChangeWatcher;
+			
+			public function BasicShape():void {
+			}
+			
+			public function get type():String
+			{
+				return StrUtil.getToken(ImageLibrary.getImage(_imageName).name);
+			}
+			
+			public function set imageName(value:String):void {
+				_imageName = value;
+				image.maintainAspectRatio = maintainAspectRatio;
+			}			
+			
+			private function setImage():void {
+				image.source = gifPlayer;
+				image_entry = ImageLibrary.getImage(_imageName);
+				//				svg_image.xmlData = new XML(image_entry.data);
+				change = BindingUtils.bindSetter(setData, image_entry, "data");
+			}
+			
+			private function setData(value:ByteArray):void {
+				if (value.length == 0) return;
+				gifPlayer.stop();
+				var value_tmp:ByteArray = ObjectUtil.copy(value) as ByteArray;
+				value_tmp.position = 0;
+				gifPlayer.loadBytes(value_tmp);
+				gifPlayer.x = x;
+				gifPlayer.y = y;
+				gifPlayer.width = width;
+				gifPlayer.height = height;
+				gifPlayer.play();
+				if (change != null) 
+				{
+					change.unwatch();
+					change = null;	
+				}
+				if (image_entry.format == "gif")
+				{
+					image.addEventListener(FlexEvent.CREATION_COMPLETE, imageLoaded);
+					image.removeEventListener(FlexEvent.UPDATE_COMPLETE, imageLoadedOther);
+				}
+			} 
+			
+			override protected function initShape() : void {
+				//super.initShape();
+				this.addChildAt(image, 0);
+				image.maintainAspectRatio = _maintainAspectRatio;
+				BindingUtils.bindProperty(image, "width", this, "width");
+				BindingUtils.bindProperty(image, "height", this, "height");
+				
+				if (_imageName.length > 0) setImage();
+				super.initShape();
+				
+			}
+
+			public function get properties():XMLList
+			{
+				var xml_str:String = new String();
+				
+				xml_str += XMLUtils.getXML("imageName", _imageName);
+				xml_str += XMLUtils.getXML("model", model.properties.toXMLString());
+				xml_str += glowXML;
+				xml_str += XMLUtils.getHtmlXML("html_text", shapeLabel);
+				return new XMLList(xml_str); 
+			}
+			
+			public override function set properties(value:XMLList):void
+			{
+				super.properties = value;	
+				imageName = value.imageName.toString();
+				shapeLabel = value.html_text.toString();
+				glow = value.glowColor.toString();
+				if (model == null) model = new BasicShapeModel();
+				model.properties = value.model;
+				x = model.x;
+				y = model.y;
+				width = model.width;
+				height = model.height;
+			}
+			
+			public override function set maintainAspectRatio(value:Boolean):void
+			{
+				_maintainAspectRatio = value;
+				image.maintainAspectRatio = value;
+			}
+			
+			private function imageLoaded(event:Event):void
+			{
+				image.removeEventListener(FlexEvent.CREATION_COMPLETE, imageLoaded);
+				image.mouseChildren = false;
+				if (imgReadyFunc != null) imgReadyFunc();
+			}
+
+			private function imageLoadedOther(event:Event):void
+			{
+				Alert.show("image loaded");
+				image.removeEventListener(FlexEvent.UPDATE_COMPLETE, imageLoadedOther);
+				if (imgReadyFunc != null) imgReadyFunc();
+			}
+		]]>
+	</mx:Script>
+	
+	
+</BasicShape>

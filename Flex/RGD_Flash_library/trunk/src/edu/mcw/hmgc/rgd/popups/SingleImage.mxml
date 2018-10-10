@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" width="800" height="600" showCloseButton="true" close="titlewindow1_closeHandler(event)"
+				creationComplete="titlewindow1_creationCompleteHandler(event)" xmlns:shapes="edu.mcw.hmgc.rgd.diagrammer.shapes.*"
+				styleName="noPadding"
+				paddingLeft="0" paddingRight="0" paddingBottom="0"
+				horizontalScrollPolicy="off"
+				verticalScrollPolicy="off">
+
+	<mx:Script>
+		<![CDATA[
+			import caurina.transitions.Tweener;
+			
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.BasicShape;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.BasicShapeModel;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.GIFShape;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.PNGShape;
+			import edu.mcw.hmgc.rgd.utils.GeometryUtil;
+			import edu.mcw.hmgc.rgd.utils.ImageEntry;
+			import edu.mcw.hmgc.rgd.utils.libraries.ImageLibrary;
+			
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			private var _imageName:String;
+
+			public function get imageName():String
+			{
+				return _imageName;
+			}
+
+			public function set imageName(value:String):void
+			{
+				_imageName = value;
+			}
+
+			private var imageEntry:ImageEntry;
+			private var image:BasicShape;
+			
+			protected function closeWindow():void 
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				// Fade out the popup
+				Tweener.addTween(this, {alpha:0, time:.5, onComplete:closeWindow});
+			}
+			
+
+			protected function titlewindow1_creationCompleteHandler(event:FlexEvent):void
+			{
+				this.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+				this.addEventListener(KeyboardEvent.KEY_UP, onKeyDown);
+				loadImage();
+			}
+			
+			public function loadImage():void{
+				imageEntry = ImageLibrary.getImage(_imageName);
+				if (imageEntry.isLoaded)
+				{
+					imgReady();
+				} else {
+					imageEntry.readyFunc = imgReady;
+					imageEntry.loadImage();
+				}
+			}
+			
+			protected function imgReady():void 
+			{
+//				Alert.show("11");
+				var _shapeModel:BasicShapeModel = new BasicShapeModel();
+//				_shapeModel.width = this.width-40;
+//				_shapeModel.height = 200;
+
+//				if (imageEntry.format.toLowerCase() == "gif")
+//				{
+//					image = new GIFShape();
+//					GIFShape(image).imageName = imageEntry.name;
+//					image.imgReadyFunc = imgLoaded;				}
+//				if (imageEntry.format.toLowerCase() == "png" || imageEntry.format.toLowerCase() == "jpg")
+				{
+					image = new PNGShape();
+					PNGShape(image).imageName = imageEntry.name;
+					image.imgReadyFunc = imgLoaded;
+					
+//					image.height = _shapeModel.height;
+				}
+//					image.maintainAspectRatio = true;
+					//image.width = 50;
+					image.model = _shapeModel;
+
+					this.addChild(image);
+//					this.width = Object(image).image.width + 20;
+//					this.height = Object(image).image.height + 30;
+					image.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+					image.addEventListener(KeyboardEvent.KEY_UP, onKeyDown);
+			}
+			
+			protected function imgLoaded():void {
+//				Alert.show("original width:"+Object(image).image.width + " height:" + Object(image).height);
+				var p2:Point = new Point(this.width, this.height);
+				var p3:Point = GeometryUtil.fitByRatio(PNGShape(image).originalSize, p2);
+				p3.y += 40;
+				image.maintainAspectRatio = true;
+				Object(image).image.maintainAspectRatio = true;
+//				Alert.show("original width:"+Object(image).image.width + " height:" + Object(image).height);
+				image.width = p3.x;
+				image.height = p3.y;
+				Object(image).image.width = p3.x;
+				Object(image).image.height = p3.y;
+				this.width = p3.x ;
+				this.height = p3.y;
+				PopUpManager.centerPopUp(this);
+//				Alert.show("width: " + this.width + " height:" + this.height);
+//				Alert.show("image width: " + image.width + " height:" + image.height);
+//				Alert.show("Object(image).image width: " + Object(image).image.width + " height:" + Object(image).image.height);
+			}
+			
+			private function onKeyDown(event:KeyboardEvent):void {
+//				Alert.show("key down");
+				if (event.keyCode == 27) closeWindow();
+			}
+			
+		]]>
+	</mx:Script>
+</mx:TitleWindow>

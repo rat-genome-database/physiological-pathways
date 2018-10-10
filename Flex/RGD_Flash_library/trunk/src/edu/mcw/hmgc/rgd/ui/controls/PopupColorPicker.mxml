@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="400" height="300">
+	<mx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			import mx.events.CloseEvent;
+			
+			private function closeDialog(event : CloseEvent) : void {
+				PopUpManager.removePopUp(this); // close this dialog
+			}
+		]]>
+	</mx:Script>
+	<mx:Button label="OK" click="closeDialog(null)" x="168.5" y="238"/>
+	<mx:ColorPicker x="51.5" y="24" width="288" height="195"/>
+</mx:TitleWindow>

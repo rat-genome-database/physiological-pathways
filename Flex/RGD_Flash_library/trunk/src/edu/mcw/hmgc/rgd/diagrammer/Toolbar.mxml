@@ -1,0 +1,796 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" 
+	width="1024" height="78" 
+	xmlns:degrafa="com.degrafa.*"
+	xmlns:paint="com.degrafa.paint.*"
+	 fontFamily="Verdana" 
+	 xmlns:flexlib="http://code.google.com/p/flexlib/" 
+	 textDecoration="underline" 
+	 xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*" 
+	 creationComplete="init()" 
+	 color="#24292A" xmlns:controls1="flexlib.controls.*">
+
+	
+
+	<degrafa:Surface>
+		<degrafa:fills>
+			
+			<paint:SolidFill color="#dcf317" id="solidYellow" />
+			
+			<paint:LinearGradientFill    id="greenGradient" angle="90">
+		       <paint:GradientStop alpha="1" color="#2ca813"/>
+		       <paint:GradientStop alpha="1" color="#19620b"/>
+		    </paint:LinearGradientFill>
+		    
+		    <paint:RadialGradientFill id="greyRadFill" radius="10000">         
+		        <paint:GradientStop  color="#444"/>         
+		        <paint:GradientStop  color="#000"/>     
+		    </paint:RadialGradientFill> 
+			
+		</degrafa:fills> 
+		
+		
+		<degrafa:strokes>
+			<paint:SolidStroke color="#3ef01b" weight="2" id="greenStroke" />
+			<paint:SolidStroke color="#000000" weight="5" id="blackStroke" />
+			<paint:LinearGradientStroke id="greyStroke" weight="3">
+				<paint:GradientStop color="#000000" />
+				<paint:GradientStop color="#aaaaaa" />
+				<paint:GradientStop color="#000000" />
+			</paint:LinearGradientStroke>
+		</degrafa:strokes>		
+	</degrafa:Surface>
+	
+	<mx:ColorPicker id="stroke_color" change="setStroke(stroke_color.selectedColor)" 
+					x="49" y="22" fontFamily="Georgia"/>
+	<mx:ColorPicker id="fill_color" change="setBackground(fill_color.selectedColor)" 
+					x="28" y="51" fontFamily="Georgia"/>
+	
+	<mx:Script>
+		<![CDATA[
+			import caurina.transitions.Tweener;
+			
+			import com.degrafa.core.IGraphicsFill;
+			import com.degrafa.core.IGraphicsStroke;
+			import com.famfamfam.silk.IconLibrary;
+			import com.roguedevelopment.objecthandles.HandleDescription;
+			import com.roguedevelopment.objecthandles.HandleRoles;
+			import com.roguedevelopment.objecthandles.ObjectHandles;
+			
+			import edu.mcw.hmgc.rgd.diagrammer.links.LinkComponent;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.BasicShape;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.BasicShapeModel;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.CalloutShape;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.GIFShape;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.PNGShape;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.RectCalloutShape;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.SVGShape;
+			import edu.mcw.hmgc.rgd.popups.LayerEditor;
+			import edu.mcw.hmgc.rgd.popups.LinkListEditor;
+			import edu.mcw.hmgc.rgd.popups.SelectFiles;
+			import edu.mcw.hmgc.rgd.popups.TextEditor;
+			import edu.mcw.hmgc.rgd.popups.ToolbarSettingEditor;
+			import edu.mcw.hmgc.rgd.utils.Configurations;
+			import edu.mcw.hmgc.rgd.utils.DiagramLibrary;
+			import edu.mcw.hmgc.rgd.utils.FileLoader;
+			import edu.mcw.hmgc.rgd.utils.FileSaver;
+			import edu.mcw.hmgc.rgd.utils.FilterUtility;
+			import edu.mcw.hmgc.rgd.utils.WEBUtils;
+			import edu.mcw.hmgc.rgd.utils.events.FileEvent;
+			
+			import flash.events.Event;
+			
+			import flexlib.scheduling.scheduleClasses.schedule_internal;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.collections.ICollectionView;
+			import mx.controls.Alert;
+			import mx.controls.PopUpButton;
+			import mx.controls.Text;
+			import mx.events.CloseEvent;
+			import mx.events.ColorPickerEvent;
+			import mx.events.ListEvent;
+			import mx.events.NumericStepperEvent;
+			import mx.events.PropertyChangeEvent;
+			import mx.events.PropertyChangeEventKind;
+			import mx.events.SliderEvent;
+			import mx.graphics.Stroke;
+			import mx.managers.PopUpManager;
+			import mx.utils.ArrayUtil;
+			
+			import org.svgweb.nodes.SVGScriptNode;
+			
+			private var _currentFileName:String ="";
+			private const BLOCK_STR:String = "_block";
+			
+
+			public var mainDiagram:Diagram;
+			public var mainBoard:Canvas;
+			
+			public var ori_width:Number;
+			public var ori_height:Number;
+			
+			private var _nextFunction:Function = null;
+			private var _showSavedAlert:Boolean = true;
+			private var _statusTimer:Timer = new Timer(3000);
+			
+			[Bindable]
+			public var settings:ToolbarSetting = new ToolbarSetting();
+			
+			[Bindable(event="valueChanged")]
+			public function get linkType():String
+			{
+				return link_type.selectedDataString + (link_type_block.selected ? 
+					BLOCK_STR : "");
+			}
+			public function set linkType(value:String):void
+			{
+				if (value.lastIndexOf(BLOCK_STR) != value.length - BLOCK_STR.length)
+				{
+					link_type.value = value;					
+					link_type_block.selected = false;
+				} else 
+				{
+					link_type.value = value.substring(0, value.length - BLOCK_STR.length);
+					link_type_block.selected = true;
+				}
+			}
+			
+			protected function init():void
+			{
+				glow_color.selectedColor = FilterUtility.defaultColor;
+				DiagramLibrary.refreshList(onDiagramListReady);
+				BindingUtils.bindProperty(currentFileName, "text", mainDiagram, "fileName");
+				BindingUtils.bindSetter(changBrowserTitle, mainDiagram, "fileName");
+				_statusTimer.addEventListener(TimerEvent.TIMER, onStatusTimer);
+			}
+			
+			protected function changBrowserTitle(new_value:String):void
+			{
+				WEBUtils.setPageTitle(new_value);	
+			}
+			
+			// Sets the passed in fill as the selected shape's background.						
+			protected function setBackground(fill_color:int) : void
+			{
+				trace("fill color:" + fill_color.toString());
+				if (mainDiagram.selectionManager.currentlySelected.length == 0) 
+				{
+					// Change background color of the diagram
+					mainDiagram.backgroundColor = fill_color;
+				} else
+				{
+					// Change fill color of selected objects
+					for each(var obj_mod:BasicShapeModel in mainDiagram.selectionManager.currentlySelected) {
+						var obj:Object = mainDiagram.objectHandles.getDisplayForModel(obj_mod);
+						if (obj is SVGShape) {
+							var obj_sel:SVGShape = obj as SVGShape;
+							obj_sel.svg_image.svgFillColor = fill_color;
+						} else if (obj is LinkComponent) {
+							var link_sel:LinkComponent = obj as LinkComponent;
+							link_sel.lineColor = fill_color;
+						} else if (obj is RectCalloutShape) {
+							RectCalloutShape(obj).fillColor = fill_color;
+						}
+					}
+				}
+			}
+			
+			// Sets the passed in stroke as the selected shape's stroke
+			protected function setStroke(stroke_color:int ) : void
+			{
+				for each(var obj_mod:BasicShapeModel in mainDiagram.selectionManager.currentlySelected) {
+					
+					var obj:Object = mainDiagram.objectHandles.getDisplayForModel(obj_mod);
+					if (obj is SVGShape) {
+						var obj_sel:SVGShape = obj as SVGShape;
+						obj_sel.svg_image.svgStrokeColor = stroke_color;
+					} else if (obj is LinkComponent) {
+						var link_sel:LinkComponent = obj as LinkComponent;
+						link_sel.arrowColor = stroke_color;
+					} else if (obj is CalloutShape) {
+						CalloutShape(obj).strokeColor = stroke_color;
+					}
+				}
+			} 
+
+			protected function button_delete_clickHandler(event:MouseEvent):void
+			{
+				// Delete
+				mainDiagram.deleteSelection();
+			}
+
+			protected function button_glow_clickHandler(event:MouseEvent):void
+			{
+				FilterUtility.defaultColor = glow_color.selectedColor;
+				mainDiagram.addFilterToSelection(FilterUtility.generateSimpleGlower);
+			}
+			
+			protected function unglow_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.removeFilterFromSelection();
+			}
+			
+			// Send to back
+			protected function button_back_clickHandler(event:MouseEvent):void
+			{ 
+				mainDiagram.sendToBack();
+			}
+
+			protected function scaleMain(value:Number):void
+			{
+				if(mainBoard.scaleX != value){
+					Tweener.addTween([mainBoard], 
+						{scaleX:value,scaleY:value,
+							width:ori_width, height:ori_height,
+							time:0.5,transition:"easeInOutCirc"});
+				}
+			}
+
+			protected function hslider2_changeHandler(event:SliderEvent):void
+			{
+				// Using a slider to control transparency
+				for each(var obj_mod:BasicShapeModel in mainDiagram.selectionManager.currentlySelected) {
+					
+					var obj:Object = mainDiagram.objectHandles.getDisplayForModel(obj_mod);
+					if (obj is BasicShape) {
+						var obj_sel:BasicShape = obj as BasicShape;
+						obj_sel.alpha = transparency.value;
+						
+//						obj_sel.svg_image.svgStroke = shape_stroke;
+					} else if (obj is LinkComponent) {
+						var link_sel:LinkComponent = obj as LinkComponent;
+					}
+				}
+			}
+
+			protected function LinkTo_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.linkSelection();
+			}
+
+			// Bring to Font
+			protected function button_front_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.bringToFront();
+			}
+
+			// Flip horizontally
+			protected function button_hflip_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.hFlipSelection();
+			}
+
+			// Flip vertically
+			protected function button_vflip_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.vFlipSelection();
+			}
+
+			protected function button_text_clickHandler(event:MouseEvent):void
+			{
+				var obj_mod:BasicShapeModel = 
+					mainDiagram.selectionManager.currentlySelected[mainDiagram.selectionManager.currentlySelected.length-1]
+					as BasicShapeModel;
+				var obj_sel1:Object = mainDiagram.objectHandles.getDisplayForModel(obj_mod);
+				if (obj_sel1 is SVGShape || obj_sel1 is PNGShape || obj_sel1 is RectCalloutShape) {
+					var obj_sel:BasicShape = obj_sel1 as BasicShape;
+					var _textEditor:TextEditor = TextEditor.instance;
+					PopUpManager.addPopUp(_textEditor, this.parent, false);
+					_textEditor.x = this.parent.width - _textEditor.width;
+					_textEditor.y = this.parent.height - _textEditor.height;
+					
+					if (_textEditor.editor != null) 
+					{
+						_textEditor.htmlText  = obj_sel.shapeLabel;
+						_textEditor.objTooltip.text = obj_sel.tag;
+						_textEditor.bind(obj_sel, ["shapeLabel", "tag"]);
+					}
+					
+				} else if (obj_sel1 is LinkComponent) {
+	
+				};
+			}
+			
+			protected function loadArrowTypes():void
+			{
+				arrow_type.dataProvider = Configurations.settings.arrow_list.arrow;
+				arrow_type.labelField = "@label";
+			}
+			
+			protected function loadLinkTypes():void
+			{
+//				link_type.dataProvider = Configurations.settings.link_list.link;
+				link_type.dataProvider = Configurations.settings.relationship_display_list.relationship;
+				link_type.labelField = "@label";
+			}
+			
+			public function save(show_alert:Boolean=true):void
+			{
+				_showSavedAlert = show_alert;
+				if (mainDiagram.fileName.length == 0)
+				{
+					saveAs();
+				} else
+				{
+					DiagramLibrary.saveTextFile(this, mainDiagram.fileName, mainDiagram.toXMLString(), saved);
+					mainDiagram.clearChangeFlag();
+				}
+//				var saver:FileSaver = new FileSaver(this, file_name, mainDiagram.toXMLString(), saved);
+			}
+			 
+			public function saveAs(file_name:String="", show_alert:Boolean=true):void
+			{
+				_showSavedAlert = show_alert;
+				var selectFiles:SelectFiles = new SelectFiles();
+				selectFiles.showInputBox = true;
+				selectFiles.initFileName = file_name;
+				selectFiles.dataProvider = DiagramLibrary.list;
+				selectFiles.nextFunction = saveAsNext;
+				PopUpManager.addPopUp(selectFiles, this.parent, true);
+				PopUpManager.centerPopUp(selectFiles);
+			}
+			
+			protected function saveAsNext(file_name:String):void
+			{
+				if (file_name == null || file_name.length == 0) return;
+				mainDiagram.fileName = file_name;
+				save(_showSavedAlert);
+			}
+			
+			protected function saved(event:Event):void 
+			{
+				removeEventListener(edu.mcw.hmgc.rgd.utils.events.FileEvent.FILE_SAVED, saved);
+				_currentFileName = mainDiagram.fileName;
+				DiagramLibrary.refreshList(onDiagramListReady);
+				if (_showSavedAlert) showStatus("File saved to [" + _currentFileName + "]");
+			}
+
+			public function load():void
+			{
+				var selectFiles:SelectFiles = new SelectFiles();
+				selectFiles.showInputBox = false;
+				selectFiles.dataProvider = DiagramLibrary.list;
+				selectFiles.nextFunction = loadFile;
+				PopUpManager.addPopUp(selectFiles, this.parent, true);
+				PopUpManager.centerPopUp(selectFiles);
+				//				var loader:FileLoader = new FileLoader(this, file_name, loaded);
+			}
+			
+			public function loadFile(file_name:String):void
+			{
+				_nextFunction = function():void {
+					if (file_name == null || file_name.length == 0) return;
+					_currentFileName = file_name;
+					DiagramLibrary.getFile(this, file_name, loaded);
+					resetStatus();
+				}
+				checkNeed2Save();
+			}
+			
+			protected function checkNeed2Save():void
+			{
+				if (!mainDiagram.ifChanged()) 
+				{
+					if (_nextFunction != null) {
+						_nextFunction();
+						_nextFunction = null;
+					}
+					return;
+				}
+
+				Alert.yesLabel = "Yes";
+				Alert.noLabel = "No";
+				Alert.cancelLabel = "Cancel";
+				Alert.show(
+					"Diagram has been changed. Do you want to save the changes to [" + mainDiagram.fileName + "] ?", 
+					"Save Changes", 
+					Alert.YES|Alert.NO|Alert.CANCEL, 
+					mainBoard, 
+					function(event:CloseEvent):void{
+						switch (event.detail)
+						{
+							case Alert.YES:
+								save(false);
+								if (_nextFunction != null) {
+									_nextFunction();
+									_nextFunction = null;
+								}
+								break;
+							case Alert.NO:
+								if (_nextFunction != null) {
+									_nextFunction();
+									_nextFunction = null;
+								}
+							break;
+							case Alert.CANCEL:
+								break;
+						}
+					},
+					IconLibrary.BULLET_ERROR
+				);
+			}
+			
+			protected function loaded(event:edu.mcw.hmgc.rgd.utils.events.FileEvent):void
+			{
+				removeEventListener(edu.mcw.hmgc.rgd.utils.events.FileEvent.FILE_READY, loaded);
+				mainDiagram.load(new XMLList(event.data), _currentFileName);
+				closeLayerEditor();
+			}
+			
+			protected var _refFile:FileReference;
+			protected var _loadReference:FileReference;
+			// Called to add file(s) for upload
+			private function addFiles():void {
+				_refFile = new FileReference();
+				_refFile.addEventListener(Event.SELECT, onSelectFile);
+				_refFile.browse();
+			}
+			
+			// Called when a file is selected
+			private function onSelectFile(event:Event):void {
+				_refFile.addEventListener(Event.COMPLETE, onLoadComplete);
+				_refFile.load();
+			}
+			
+			private function onLoadComplete(event:Event):void
+			{
+				var file_saver:FileSaver = new FileSaver(this);
+				addEventListener(edu.mcw.hmgc.rgd.utils.events.FileEvent.FILE_SAVED, onSaveComplete);
+				file_saver.saveFile(_refFile.name, _refFile.data);
+			}
+			
+			/**
+			 * 
+			 *
+			 */
+			private function onSaveComplete(event:Event):void
+			{
+				removeEventListener(edu.mcw.hmgc.rgd.utils.events.FileEvent.FILE_SAVED, 
+					onSaveComplete);
+				Alert.show("save complete" );
+			}
+			
+			private function duplicate():void
+			{
+				mainDiagram.duplicateSelection();
+			}
+
+			private function selectAll():void
+			{
+				mainDiagram.selectAll();
+			}
+			
+			private function button_undo_clickHandler(event:Event):void
+			{
+				mainDiagram.undo();
+			}
+			
+			private function button_redo_clickHandler(event:Event):void
+			{
+				mainDiagram.redo();	
+			}
+			
+
+			protected function onGlowColorChange(event:ColorPickerEvent):void
+			{
+				button_glow_clickHandler(null);
+			}
+
+
+			private function onDiagramListReady():void
+			{
+//				file_name_input.dataProvider = DiagramLibrary.list;
+//				file_name_input.labelField = "@name";
+//				if (_currentFileName.length > 0) file_name_input.value = _currentFileName;
+//				_currentFileName = "";
+			}
+
+			protected function link_type_changeHandler(event:ListEvent):void
+			{
+				if (mainDiagram.selectionManager.currentlySelected.length < 1 ||
+					mainDiagram.selectionManager.currentlySelected.length > 2) return;
+				if (mainDiagram.selectionManager.currentlySelected.length == 1)
+				{
+					var obj_model:BasicShapeModel = mainDiagram.selectionManager.currentlySelected[0] as BasicShapeModel;
+					var obj:Object = mainDiagram.objectHandles.getDisplayForModel(obj_model);
+					if (obj is LinkComponent)
+					{
+						dispatchEvent(new PropertyChangeEvent("valueChanged", true,
+							false, PropertyChangeEventKind.UPDATE, "linkType"));
+					}
+					return;
+				} else 
+				{
+					mainDiagram.linkSelection();
+				}
+			}
+
+			protected function link_type_block_clickHandler(event:MouseEvent):void
+			{
+				dispatchEvent(new PropertyChangeEvent("valueChanged", true,
+					false, PropertyChangeEventKind.UPDATE, "linkType"));
+			}
+			
+			protected function butChangeSettings_clickHandler(event:MouseEvent):void
+			{
+				var setting_editor:ToolbarSettingEditor = new ToolbarSettingEditor();
+				setting_editor.onReturn = updateSetting;
+				setting_editor.toolbarSetting = settings;
+				PopUpManager.addPopUp(setting_editor, this.parent, true);
+				PopUpManager.centerPopUp(setting_editor);
+			}
+
+			private function updateSetting(value:ToolbarSetting):void
+			{
+				settings.copy(value);
+			}
+
+			protected function butSwapObjects_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.swapSelection();
+			}
+
+			protected function newFile():void 
+			{
+				_nextFunction = function():void {
+					mainDiagram.newDiagram();
+					closeLayerEditor();
+					resetStatus();
+				};
+				checkNeed2Save();
+			}
+
+			protected function checkbox1_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.showCallouts = ckbShowCallout.selected;
+			}
+
+			protected function resetStatus():void
+			{
+				ckbShowCallout.selected = true;
+			}
+			
+			protected function showStatus(status_text:String, timer_length:int = 3000, text_color:Object="0x00ff00"):void
+			{
+				statusText.setStyle("color", text_color);
+				if (status_text != null) 
+				{
+					statusText.text = status_text;
+					if (timer_length > 0)
+					{
+						_statusTimer.delay = timer_length;
+						_statusTimer.start();
+					}
+				}
+			}
+			
+			private function onStatusTimer(event:TimerEvent):void
+			{
+				_statusTimer.stop();
+				statusText.text = "";
+			}
+			
+
+			protected function buttonGroup_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.groupSelection();
+			}
+
+
+			protected function buttonUngroup_clickHandler(event:MouseEvent):void
+			{
+				mainDiagram.ungroupSelection();
+			}
+
+
+			protected function NSstrokeWeight_changeHandler(event:NumericStepperEvent):void
+			{
+				trace("fill color:" + fill_color.toString());
+				if (mainDiagram.selectionManager.currentlySelected.length == 0) 
+				{
+				} else
+				{
+					// Change stroke weight of selected objects
+					for each(var obj_mod:BasicShapeModel in mainDiagram.selectionManager.currentlySelected) {
+						var obj:Object = mainDiagram.objectHandles.getDisplayForModel(obj_mod);
+						if (obj is SVGShape) {
+							var obj_sel:SVGShape = obj as SVGShape;
+							obj_sel.svg_image.svgStrokeWeight = event.value as int;
+						} if (obj is CalloutShape) {
+							CalloutShape(obj).strokeWidth = event.value as int;
+						}
+					}
+				}
+			}
+			
+			protected function NSstrokeGapOn_changeHandler(event:NumericStepperEvent):void
+			{
+				trace("fill color:" + fill_color.toString());
+				if (mainDiagram.selectionManager.currentlySelected.length == 0) 
+				{
+				} else
+				{
+					// Change stroke weight of selected objects
+					for each(var obj_mod:BasicShapeModel in mainDiagram.selectionManager.currentlySelected) {
+						var obj:Object = mainDiagram.objectHandles.getDisplayForModel(obj_mod);
+						if (obj is SVGShape) {
+							var obj_sel:SVGShape = obj as SVGShape;
+							obj_sel.svg_image.svgStrokeGapOnLen = event.value as int;
+						}
+					}
+				}
+			}
+			
+			protected function NSstrokeGapOff_changeHandler(event:NumericStepperEvent):void
+			{
+				trace("fill color:" + fill_color.toString());
+				if (mainDiagram.selectionManager.currentlySelected.length == 0) 
+				{
+				} else
+				{
+					// Change stroke weight of selected objects
+					for each(var obj_mod:BasicShapeModel in mainDiagram.selectionManager.currentlySelected) {
+						var obj:Object = mainDiagram.objectHandles.getDisplayForModel(obj_mod);
+						if (obj is SVGShape) {
+							var obj_sel:SVGShape = obj as SVGShape;
+							obj_sel.svg_image.svgStrokeGapOffLen = event.value as int;
+						}
+					}
+				}
+			}
+			
+			private var _layerEditor:LayerEditor = null;
+
+			protected function buttonLayers_clickHandler(event:MouseEvent):void
+			{
+				if (_layerEditor != null) {
+					_layerEditor.visible = true;	
+				} else {
+					_layerEditor = new LayerEditor();
+					_layerEditor.x = 0;
+					_layerEditor.y = mainBoard.height - _layerEditor.height;
+					_layerEditor.mainDiagram = mainDiagram;
+					//				selectFiles.dataProvider = DiagramLibrary.list;
+					//				selectFiles.nextFunction = loadFile;
+					PopUpManager.addPopUp(_layerEditor, this.parent, false);
+				} 
+			}
+
+			private function closeLayerEditor():void
+			{
+				if (_layerEditor != null)
+				{
+					PopUpManager.removePopUp(_layerEditor);
+					_layerEditor = null;
+				}
+			}
+			
+			private function editLinks():void
+			{
+				var link_editor:LinkListEditor = new LinkListEditor();
+				link_editor.workingDiagram = mainDiagram;
+				PopUpManager.addPopUp(link_editor, this.parent, false);
+			}
+		]]>
+	</mx:Script>
+	<mx:Glow id="glowImage" duration="500"
+			 alphaFrom="0" alphaTo="1"
+			 blurXFrom="0.0" blurXTo="30.0" 
+			 blurYFrom="0.0" blurYTo="30.0"  strength="2"
+			 color="0xCC0000" />
+
+	<mx:Glow id="unglowImage" duration="2000"  
+			 alphaFrom="1" alphaTo="0"
+			 blurXFrom="30.0" blurXTo="0.0"
+			 blurYFrom="30.0" blurYTo="0.0"  strength="2"
+			 color="0xCC0000"/>
+
+	<mx:Label x="4" y="55" text="Fill:" color="#F0FF00"/>
+	<mx:Label x="4" y="24" text="Stroke:" color="#FFFC00"/>
+	<mx:Button x="599.5" y="44" toolTip="Delete" 
+			   icon="{IconLibrary.DELETE}" 
+			   click="button_delete_clickHandler(event)" 
+			   width="22"/>
+	<mx:Button x="599.5" y="10" toolTip="Undo" 
+			   icon="{IconLibrary.ARROW_UNDO}" 
+			   click="button_undo_clickHandler(event)" 
+			   width="22"/>
+	<mx:Button x="624.5" y="10" toolTip="Redo" 
+			   icon="{IconLibrary.ARROW_REDO}" 
+			   click="button_redo_clickHandler(event)" 
+			   width="22"/>
+	<mx:Button x="324" y="44" toolTip="Glow" 
+			   icon="{IconLibrary.LIGHTBULB_ADD}" 
+			   click="button_glow_clickHandler(event)" 
+			   width="22"/>
+	<mx:Button x="370.5" y="44" toolTip="Unglow" 
+			   icon="{IconLibrary.LIGHTBULB_OFF}" 
+			   click="unglow_clickHandler(event)" 
+			   width="22"/>
+	<mx:Button x="222" y="10" toolTip="Send to back" 
+			   click="button_back_clickHandler(event)"
+			   width="22" icon="{IconLibrary.SHAPE_MOVE_BACK}"/>
+	<mx:Button x="248" y="10" toolTip="Bring to front" width="22"
+			   click="button_front_clickHandler(event)"
+			   icon="{IconLibrary.SHAPE_MOVE_FRONT}"/>
+	<mx:HSlider x="72" y="56" change="hslider2_changeHandler(event)" 
+				id="transparency" minimum="0" maximum="1" 
+				snapInterval=".05" width="84"/>
+	<mx:Button x="308.5" y="10" toolTip="Link" 
+			   icon="{IconLibrary.LINK}" id="LinkTo" 
+			   click="LinkTo_clickHandler(event)" width="22"/>
+	<mx:Button x="214" y="10" label="H-Flip" 
+			   click="button_hflip_clickHandler(event)" 
+			   visible="false"/>
+	<mx:Button x="216" y="46" label="V-Flip" 
+			   click="button_vflip_clickHandler(event)" 
+			   visible="false"/>
+	<controls:rgd_ComboBox x="648" y="46" width="152" 
+						   id="arrow_type" 
+						   creationComplete="loadArrowTypes()" 
+						   visible="false">
+	</controls:rgd_ComboBox>
+	<controls:rgd_ComboBox x="328.5" y="10" width="139" 
+						   id="link_type"  
+						   creationComplete="loadLinkTypes()" 
+						   change="link_type_changeHandler(event)">
+	</controls:rgd_ComboBox>
+	<mx:NumericStepper x="821" y="10" width="46" id="ns_dash" 
+					   maximum="100" visible="false"/>
+	<mx:NumericStepper x="823" y="46" width="46" id="ns_gap" 
+					   maximum="100" visible="false"/>
+	<mx:Button x="168" y="10" label="Text" id="button_text" 
+			   click="button_text_clickHandler(event)" fontFamily="Verdana" width="47" paddingBottom="0" paddingLeft="0" paddingRight="0" paddingTop="0"/>
+	<mx:HSlider id="slideri" minimum="0.5" maximum="2.0" value="1" 
+				change="{scaleMain(slideri.value)}" 
+				snapInterval="0.1" y="43" x="700" width="96"/>
+	<mx:Button x="879.5" y="0" height="41" width="41" toolTip="Save file" 
+			   label="Save" click="save()" paddingLeft="0" paddingRight="0"/>
+	<mx:Button x="866.5" y="49" height="19" width="54" toolTip="Save file" 
+			   label="Save as" click="saveAs(mainDiagram.fileName)" paddingBottom="0" paddingLeft="0" paddingRight="0" paddingTop="0"/>
+	<mx:Button x="803" y="49" height="19" width="54.5" toolTip="Edit external links list" 
+			   label="Links" click="editLinks()"/>
+	<mx:Button x="803.5" y="10" height="22" width="22" toolTip="Load file" 
+			   icon="{IconLibrary.FOLDER_TABLE}" click="load()"/>
+	<controls1:CanvasButton x="600.5" y="44" width="22" 
+						  icon="{IconLibrary.FOLDER_ADD}" 
+						  height="22" label="upload" 
+						  click="addFiles()" visible="false"/>
+	<controls1:CanvasButton x="531.5" y="42" width="64" height="26" 
+						  label="Duplicate" click="duplicate()" paddingBottom="0" paddingLeft="0" paddingRight="0" paddingTop="0"/>
+	<controls1:CanvasButton x="531.5" y="8" width="64" height="26" 
+						  label="Select all" click="selectAll()" paddingBottom="0" paddingLeft="0" paddingRight="0" paddingTop="0"/>
+	<mx:ColorPicker id="glow_color" x="344.5" y="44" change="onGlowColorChange(event)"/>
+	<mx:Label x="664" y="46" text="Zoom:" textDecoration="none" color="#F0FF00"/>
+	<mx:Label x="72" y="45" text="Transparency:" textDecoration="none" color="#F0FF00"/>
+	<mx:Label x="74" y="5" text="W" textDecoration="none" color="#F0FF00"/>
+	<mx:Label x="101" y="5" text="On" textDecoration="none" color="#F0FF00"/>
+	<mx:Label x="135" y="5" text="Off" textDecoration="none" color="#F0FF00"/>
+	<mx:CheckBox x="466.5" y="0" label="Block" width="57" id="link_type_block" 
+				 color="#FFFF00" click="link_type_block_clickHandler(event)" 
+				 focusRoundedCorners="#FFFF00" textRollOverColor="#96FF00" 
+				 textSelectedColor="#FFFF00" />
+	<mx:CheckBox x="466.5" y="20" label="Bold" width="57" id="link_weight_bold" 
+				 color="#FFFF00" 
+				 focusRoundedCorners="#FFFF00" textRollOverColor="#96FF00" 
+				 textSelectedColor="#FFFF00" />
+	<mx:Button icon="{IconLibrary.COG_EDIT}" x="624.5" y="44" width="22" height="22" 
+			   id="butChangeSettings" click="butChangeSettings_clickHandler(event)" 
+			   toolTip="Change settings"/>
+	<mx:Button icon="{IconLibrary.ARROW_REFRESH}" x="279.5" y="10" width="22" height="22"
+			   id="butSwapObjects" toolTip="Swap" click="butSwapObjects_clickHandler(event)"/>
+	<mx:Button x="834" y="10" height="22" width="22" toolTip="New file" 
+			   icon="{IconLibrary.PAGE_WHITE}" click="newFile()" themeColor="#F3F7F9"/>
+	<mx:CheckBox id="ckbShowCallout" x="414.5" y="44" label="Show Callouts" color="#FFFF00" 
+				 click="checkbox1_clickHandler(event)" selected="true" textRollOverColor="#96FF00"/>
+	<mx:TextArea x="664" y="11" width="131.5" color="#0113FF" id="currentFileName" alpha="1.0" height="20" backgroundColor="#CFCDCD" textDecoration="none" borderStyle="inset" editable="false" wordWrap="false" toolTip="{currentFileName.text}"/>
+	<mx:Text x="922.5" y="0" width="101.5" height="78" id="statusText" color="#2AFF00" fontSize="12"/>
+	<mx:Button x="221" y="44" icon="{IconLibrary.SHAPE_GROUP}" id="buttonGroup" click="buttonGroup_clickHandler(event)" width="22"/>
+	<mx:Button x="248" y="44" icon="{IconLibrary.SHAPE_UNGROUP}" id="buttonUngroup" click="buttonUngroup_clickHandler(event)" width="22"/>
+	<mx:NumericStepper id="NSstrokeWeight" x="72" y="22" width="33" change="NSstrokeWeight_changeHandler(event)" maximum="9"/>
+	<mx:NumericStepper id="NSstrokeGapOn" x="101" y="22" width="33" change="NSstrokeGapOn_changeHandler(event)" maximum="9"/>
+	<mx:NumericStepper id="NSstrokeGapOff" x="133" y="22" width="33" change="NSstrokeGapOff_changeHandler(event)" maximum="9"/>
+	<mx:Button x="280" y="44" icon="{IconLibrary.LAYERS}" id="buttonLayers" click="buttonLayers_clickHandler(event)" width="22" toolTip="Edit layers"/>
+	
+</mx:Canvas>

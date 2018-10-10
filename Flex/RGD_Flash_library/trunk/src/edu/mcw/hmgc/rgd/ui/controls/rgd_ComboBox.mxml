@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:ComboBox xmlns:mx="http://www.adobe.com/2006/mxml" creationComplete="init()" >
+	<mx:Script>
+		<![CDATA[
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.collections.XMLListCollection;
+			
+			[Bindable]
+			public var selectedDataString:String;
+			
+			private var _selectWatcher:ChangeWatcher;
+			
+			public function init():void
+			{
+				_selectWatcher = BindingUtils.bindSetter(setSelectedDataString, this, "selectedItem");
+			}
+			
+			public function set value(val:Object)  : void {
+				if ( val != null ) {
+					for (var i : int = 0; i < dataProvider.length; i++) {
+						if (dataProvider is XMLListCollection)
+						{
+							if (val == dataProvider[i].@name[0]) {
+								selectedIndex = i;
+								return;
+							};
+						} else if ( val == dataProvider[i].data || val == dataProvider[i].label ) {
+							selectedIndex = i; 
+							return;
+						}    }    }
+				selectedIndex = -1;
+			}
+			
+			public function setSelectedDataString(value:Object):String
+			{
+				if (value == null) return "";
+				if (value.data is XMLList)
+				{
+					selectedDataString = value.@name[0];
+				} else
+				{
+					selectedDataString = value.data as String;
+				};
+			
+				return selectedDataString;
+			}
+		]]>
+	</mx:Script>
+</mx:ComboBox>

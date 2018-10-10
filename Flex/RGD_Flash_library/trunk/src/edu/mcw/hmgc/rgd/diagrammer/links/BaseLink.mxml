@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BasicShape xmlns="edu.mcw.hmgc.rgd.diagrammer.shapes.*" 
+			xmlns:mx="http://www.adobe.com/2006/mxml"
+			xmlns:degrafa="com.degrafa.*"
+			width="50" height="50" xmlns:degrafa1="http://www.degrafa.com/2007"
+			xmlns:rgd="edu.mcw.hmgc.rgd.graphics.*">
+	
+	<mx:Script>
+		<![CDATA[
+			import edu.mcw.hmgc.rgd.popups.Loading;
+			import edu.mcw.hmgc.rgd.utils.ImageEntry;
+			import edu.mcw.hmgc.rgd.utils.libraries.ImageLibrary;
+			
+			import mx.controls.Alert;
+			import mx.controls.Label;
+			import mx.controls.Text;
+			import mx.managers.PopUpManager;
+			import mx.rpc.events.ResultEvent;
+			
+			
+//			private var _shapeLabel:Text;
+//			private var _shapeLabelString:String = new String();
+			
+			private var _fromNode:BasicShape;
+			private var _toNode:BasicShape;
+			
+			private var _urlLoader:URLLoader;
+			private var _svgURL:String = new String();
+			
+			override protected function initShape() : void {
+				
+			}
+			
+			
+		]]>
+	</mx:Script>
+	
+</BasicShape>

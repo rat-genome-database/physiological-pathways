@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BasicShape xmlns="edu.mcw.hmgc.rgd.diagrammer.shapes.*" 
+			xmlns:mx="http://www.adobe.com/2006/mxml"
+			xmlns:degrafa="com.degrafa.*" 
+			width="50" height="50" xmlns:degrafa1="http://www.degrafa.com/2007"
+			xmlns:rgd="edu.mcw.hmgc.rgd.graphics.*">
+	
+	<mx:Script>
+		<![CDATA[
+			import com.degrafa.GraphicImage;
+			import com.degrafa.Surface;
+			
+			import edu.mcw.hmgc.rgd.graphics.SVGImage;
+			import edu.mcw.hmgc.rgd.utils.GraphicsUtil;
+			import edu.mcw.hmgc.rgd.utils.ImageEntry;
+			import edu.mcw.hmgc.rgd.utils.StrUtil;
+			import edu.mcw.hmgc.rgd.utils.XMLUtils;
+			import edu.mcw.hmgc.rgd.utils.libraries.ImageLibrary;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.controls.Alert;
+			import mx.controls.Image;
+			import mx.controls.Text;
+			import mx.core.MovieClipLoaderAsset;
+			import mx.events.FlexEvent;
+			import mx.utils.Base64Decoder;
+			
+			private var _urlLoader:URLLoader;
+			private var _imageName:String = new String();
+			public var image:Image = new Image();
+			
+			private var image_entry:ImageEntry;
+			
+			private var change:ChangeWatcher;
+			
+			private var _imageLoaded:Boolean = false;
+			
+			private var _originalSize:Point = new Point(0,0);
+
+			public function get originalSize():Point
+			{
+				return _originalSize;
+			}
+
+			public function set originalSize(value:Point):void
+			{
+				_originalSize = value;
+			}
+
+			
+			public function BasicShape():void {
+			}
+
+			public function get type():String
+			{
+				return StrUtil.getToken(ImageLibrary.getImage(_imageName).name);
+			}
+			
+			public function set imageName(value:String):void {
+				_imageName = value;
+				image.maintainAspectRatio = false;
+			}			
+			
+			private function setImage():void {
+				image_entry = ImageLibrary.getImage(_imageName);
+				//				svg_image.xmlData = new XML(image_entry.data);
+				addWatcher(BindingUtils.bindSetter(setData, image_entry, "data"));
+			}
+			
+			private function setData(value:ByteArray):void {
+				if (value.length == 0) return;
+				if (change != null) 
+				{
+					change.unwatch();
+					change = null;	
+				}
+				if (image_entry.format == "swf")
+				{
+//					image.addEventListener(FlexEvent.CREATION_COMPLETE, imageLoaded);
+					image.addEventListener(FlexEvent.UPDATE_COMPLETE, imageLoaded);
+									
+					image.addEventListener(IOErrorEvent.IO_ERROR, imageLoadError);
+				} else {
+					image.addEventListener(Event.COMPLETE, imageLoadedOther);
+				}
+				_imageLoaded = false;
+				image.load(value);
+			} 
+			
+			override protected function initShape() : void {
+				//super.initShape();
+				this.addChildAt(image, 0);
+//				_contentCanvas.addChild(image);
+				image.maintainAspectRatio = false;
+				addWatcher(BindingUtils.bindProperty(image, "width", this, "width"));
+				addWatcher(BindingUtils.bindProperty(image, "height", this, "height"));
+				
+				if (_imageName.length > 0) setImage();
+				super.initShape();
+				
+			}
+
+			public function get properties():XMLList
+			{
+				var xml_str:String = new String();
+				
+				xml_str += XMLUtils.getXML("imageName", _imageName);
+				xml_str += XMLUtils.getXML("model", model.properties.toXMLString());
+				xml_str += glowXML;
+				xml_str += XMLUtils.getHtmlXML("html_text", shapeLabel);
+				return new XMLList(xml_str); 
+			}
+			
+			public override function set properties(value:XMLList):void
+			{
+				super.properties = value;	
+				shapeLabel = value.html_text.toString();
+				glow = value.glowColor.toString();
+				if (model == null) model = new BasicShapeModel();
+				model.properties = value.model;
+				x = model.x;
+				y = model.y;
+				width = model.width;
+				height = model.height;
+				imageName = value.imageName.toString();
+				adjustToModel();
+			}
+			
+			public override function set maintainAspectRatio(value:Boolean):void
+			{
+				_maintainAspectRatio = value;
+				if (image_entry != null && !image_entry.format == "swf") 
+				{
+					image.maintainAspectRatio = value;
+				} else 
+				{
+					image.maintainAspectRatio = false;
+				}
+				if (!_imageLoaded) return;
+				
+				if (value)
+				{
+					if (image.content is flash.display.AVM1Movie || image.content is flash.display.MovieClip )
+					{
+						var obj_aspect_ratio:Number = image.content.root.loaderInfo.width /
+							image.content.root.loaderInfo.height;
+						if (isNaN(obj_aspect_ratio)) 
+						{
+							obj_aspect_ratio = model.width / model.height;
+							height = model.height;
+							width = model.width;
+						}
+						var sign:Number = (width / height) > 0 ? 1 : -1;
+						if (Math.abs(height * obj_aspect_ratio)> Math.abs(width))
+						{
+							height = sign * width / obj_aspect_ratio;
+						} else
+						{
+							width = sign * height * obj_aspect_ratio;
+						}
+					} else if (!isNaN(image.contentWidth))
+					{
+							width = model.width;
+							height = model.height;
+					} 
+				}
+			}
+			
+			private function imageLoaded(event:Event):void
+			{
+				trace("SWF image loaded: " + _imageName);
+				_imageLoaded = true;
+
+				image.removeEventListener(FlexEvent.UPDATE_COMPLETE, imageLoaded);
+				maintainAspectRatio = _maintainAspectRatio;
+				image.mouseChildren = false;
+				adjustToModel();
+				addEventListener(MouseEvent.MOUSE_OVER, mouseOverHandler);
+				if (imgReadyFunc != null) imgReadyFunc();
+			}
+			
+			private function imageLoadedOther(event:Event):void
+			{
+				image.removeEventListener(Event.COMPLETE, imageLoadedOther);
+				_imageLoaded = true;
+				image.maintainAspectRatio = false;
+				_originalSize = new Point(image.contentWidth, image.contentHeight);
+				if (imgReadyFunc != null) imgReadyFunc();
+			}
+
+			private function mouseOverHandler(event:MouseEvent):void
+			{
+				if (buttonMode && hasOwnProperty("URL") && URL.length > 0 && hitArea == null)
+				{
+					GraphicsUtil.createHitArea(this);
+					removeEventListener(MouseEvent.MOUSE_OVER, mouseOverHandler);
+				}
+			}
+			
+			private function imageLoadError(event:Event):void
+			{
+				image.removeEventListener(IOErrorEvent..IO_ERROR, imageLoadError);
+				Alert.show(event.toString(), "Errors in PNG image loading");
+			}
+			
+		]]>
+	</mx:Script>
+	
+	
+</BasicShape>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BasicShape xmlns="edu.mcw.hmgc.rgd.diagrammer.shapes.*" 
+		   xmlns:mx="http://www.adobe.com/2006/mxml"
+		   xmlns:degrafa="com.degrafa.*"
+		   width="50" height="50" xmlns:degrafa1="http://www.degrafa.com/2007"
+		   xmlns:rgd="edu.mcw.hmgc.rgd.graphics.*" 
+		   xmlns:paint="com.degrafa.paint.*" 
+		   xmlns:geometry="com.degrafa.geometry.*" xmlns:transform="com.degrafa.transform.*">
+	
+	<degrafa:Surface width="{width}" height="{height}">
+		<!-- Creating fills. -->
+		<degrafa:fills>
+			<paint:SolidFill    id="blue"
+								color="#62ABCD"/>
+		</degrafa:fills>
+		
+		<!-- Creating Strokes. -->
+		<degrafa:strokes>
+			<paint:SolidStroke    id="white"
+								  color="#FFFFFF"
+								  alpha="1"
+								  weight="3"/>
+		</degrafa:strokes>
+		
+		<!-- Creating a Geometry Group. -->
+		<degrafa:GeometryGroup>
+			<degrafa:GeometryComposition > 
+				<geometry:RasterText id="rasterText" text="Hello" 
+									 textColor="0" size="14" 
+									 horizontalCenter="0" 
+									 fontFamily="Arial" 
+									 fontWeight="bold">
+					<geometry:transform>
+						<transform:TransformGroup>
+							<transform:SkewTransform skewX="0"/>
+							<transform:RotateTransform angle="0" registrationPoint="center"/>
+						</transform:TransformGroup>
+					</geometry:transform>
+					<geometry:filters>
+						<mx:GlowFilter
+							color="#FF00FF"/>
+					</geometry:filters>
+					
+				</geometry:RasterText>
+			</degrafa:GeometryComposition>
+			
+			
+			<!-- Creating a Circle. -->
+			<geometry:Circle    fill="{blue}"
+								stroke="{white}"
+								radius="10"/>
+			
+		</degrafa:GeometryGroup> 
+
+
+	</degrafa:Surface>
+	
+
+</BasicShape>

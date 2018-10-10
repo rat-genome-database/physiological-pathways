@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+		   resize="callLater( moveIFrame )"
+		   move="callLater( moveIFrame )">
+	
+	<mx:Script>
+		import flash.external.ExternalInterface;
+		import flash.geom.Point;
+		import flash.net.navigateToURL;
+
+		private var __source: String;
+		
+		public function moveIFrame(): void 
+		{
+			var pt:flash.geom.Point= new Point(0,0);
+			pt = this.localToGlobal(pt);            
+			ExternalInterface.call( "moveIFrame", pt.x, pt.y, this.width, this.height );
+		}
+		
+		public function set source(source: String): void 
+		{
+			if (source)
+			{
+				
+				if (! ExternalInterface.available)
+				{
+					throw new Error("ExternalInterface is not available in this container. Internet Explorer ActiveX, Firefox, Mozilla 1.7.5 and greater, or other browsers that support NPRuntime are required.");
+				}
+				__source = source;
+				ExternalInterface.call( "setIFrameContent", source );
+				moveIFrame();
+			}
+		}
+		
+		public function get source(): String 
+		{
+			return __source;
+		}
+		
+		override public function  set visible(visible: Boolean): void 
+		{
+			super.visible=visible;
+			
+			if (visible)
+			{
+				ExternalInterface.call("showIFrame");
+				moveIFrame();
+			}
+			else 
+			{
+				ExternalInterface.call( "setIFrameContent", "about:blank" );           
+				ExternalInterface.call("hideIFrame");
+			}
+		}
+		
+		public function back():void
+		{
+			ExternalInterface.call("backwardIFrame");
+		}
+		
+		public function forward():void
+		{
+			ExternalInterface.call("forwardIFrame");
+		}
+		
+	</mx:Script>
+	
+</mx:Canvas>

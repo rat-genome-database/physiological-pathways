@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions targetNamespace="http://PPP_Services" xmlns:apachesoap="http://xml.apache.org/xml-soap" xmlns:impl="http://PPP_Services" xmlns:intf="http://PPP_Services" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:wsdlsoap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<!--WSDL created by Apache Axis version: 1.4
+Built on Apr 22, 2006 (06:55:48 PDT)-->
+ <wsdl:types>
+  <schema elementFormDefault="qualified" targetNamespace="http://PPP_Services" xmlns="http://www.w3.org/2001/XMLSchema">
+   <element name="file_name" type="xsd:string"/>
+   <element name="image_type" type="xsd:string"/>
+   <element name="GetImageReturn">
+    <complexType>
+     <sequence>
+      <element maxOccurs="unbounded" minOccurs="0" name="item" type="xsd:byte"/>
+     </sequence>
+    </complexType>
+   </element>
+   <element name="file_name1" type="xsd:string"/>
+   <element name="file_type" type="xsd:string"/>
+   <element name="GetFileReturn">
+    <complexType>
+     <sequence>
+      <element maxOccurs="unbounded" minOccurs="0" name="item" type="xsd:byte"/>
+     </sequence>
+    </complexType>
+   </element>
+   <element name="file_name2" type="xsd:string"/>
+   <element name="file_type1" type="xsd:string"/>
+   <element name="data">
+    <complexType>
+     <sequence>
+      <element maxOccurs="unbounded" minOccurs="0" name="item" type="xsd:byte"/>
+     </sequence>
+    </complexType>
+   </element>
+   <element name="SaveFileReturn">
+    <complexType>
+     <sequence>
+      <element maxOccurs="unbounded" minOccurs="0" name="item" type="xsd:byte"/>
+     </sequence>
+    </complexType>
+   </element>
+   <element name="gene_symbol" type="xsd:string"/>
+   <element name="options" type="xsd:string"/>
+   <element name="GetGeneInfoReturn" type="xsd:string"/>
+   <element name="folderName" type="xsd:string"/>
+   <element name="GetFileListReturn">
+    <complexType>
+     <sequence>
+      <element maxOccurs="unbounded" minOccurs="0" name="item" type="xsd:byte"/>
+     </sequence>
+    </complexType>
+   </element>
+  </schema>
+ </wsdl:types>
+
+   <wsdl:message name="SaveFileRequest">
+
+      <wsdl:part element="impl:file_name2" name="file_name"/>
+
+      <wsdl:part element="impl:file_type1" name="file_type"/>
+
+      <wsdl:part element="impl:data" name="data"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="GetFileResponse">
+
+      <wsdl:part element="impl:GetFileReturn" name="GetFileReturn"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="GetFileListResponse">
+
+      <wsdl:part element="impl:GetFileListReturn" name="GetFileListReturn"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="GetFileListRequest">
+
+      <wsdl:part element="impl:folderName" name="folderName"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="GetGeneInfoRequest">
+
+      <wsdl:part element="impl:gene_symbol" name="gene_symbol"/>
+
+      <wsdl:part element="impl:options" name="options"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="GetImageResponse">
+
+      <wsdl:part element="impl:GetImageReturn" name="GetImageReturn"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="GetFileRequest">
+
+      <wsdl:part element="impl:file_name1" name="file_name"/>
+
+      <wsdl:part element="impl:file_type" name="file_type"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="GetImageRequest">
+
+      <wsdl:part element="impl:file_name" name="file_name"/>
+
+      <wsdl:part element="impl:image_type" name="image_type"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="SaveFileResponse">
+
+      <wsdl:part element="impl:SaveFileReturn" name="SaveFileReturn"/>
+
+   </wsdl:message>
+
+   <wsdl:message name="GetGeneInfoResponse">
+
+      <wsdl:part element="impl:GetGeneInfoReturn" name="GetGeneInfoReturn"/>
+
+   </wsdl:message>
+
+   <wsdl:portType name="FileService">
+
+      <wsdl:operation name="GetImage" parameterOrder="file_name image_type">
+
+         <wsdl:input message="impl:GetImageRequest" name="GetImageRequest"/>
+
+         <wsdl:output message="impl:GetImageResponse" name="GetImageResponse"/>
+
+      </wsdl:operation>
+
+      <wsdl:operation name="GetFile" parameterOrder="file_name file_type">
+
+         <wsdl:input message="impl:GetFileRequest" name="GetFileRequest"/>
+
+         <wsdl:output message="impl:GetFileResponse" name="GetFileResponse"/>
+
+      </wsdl:operation>
+
+      <wsdl:operation name="SaveFile" parameterOrder="file_name file_type data">
+
+         <wsdl:input message="impl:SaveFileRequest" name="SaveFileRequest"/>
+
+         <wsdl:output message="impl:SaveFileResponse" name="SaveFileResponse"/>
+
+      </wsdl:operation>
+
+      <wsdl:operation name="GetGeneInfo" parameterOrder="gene_symbol options">
+
+         <wsdl:input message="impl:GetGeneInfoRequest" name="GetGeneInfoRequest"/>
+
+         <wsdl:output message="impl:GetGeneInfoResponse" name="GetGeneInfoResponse"/>
+
+      </wsdl:operation>
+
+      <wsdl:operation name="GetFileList" parameterOrder="folderName">
+
+         <wsdl:input message="impl:GetFileListRequest" name="GetFileListRequest"/>
+
+         <wsdl:output message="impl:GetFileListResponse" name="GetFileListResponse"/>
+
+      </wsdl:operation>
+
+   </wsdl:portType>
+
+   <wsdl:binding name="FileServiceSoapBinding" type="impl:FileService">
+
+      <wsdlsoap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+      <wsdl:operation name="GetImage">
+
+         <wsdlsoap:operation soapAction=""/>
+
+         <wsdl:input name="GetImageRequest">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:input>
+
+         <wsdl:output name="GetImageResponse">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:output>
+
+      </wsdl:operation>
+
+      <wsdl:operation name="GetFile">
+
+         <wsdlsoap:operation soapAction=""/>
+
+         <wsdl:input name="GetFileRequest">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:input>
+
+         <wsdl:output name="GetFileResponse">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:output>
+
+      </wsdl:operation>
+
+      <wsdl:operation name="SaveFile">
+
+         <wsdlsoap:operation soapAction=""/>
+
+         <wsdl:input name="SaveFileRequest">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:input>
+
+         <wsdl:output name="SaveFileResponse">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:output>
+
+      </wsdl:operation>
+
+      <wsdl:operation name="GetGeneInfo">
+
+         <wsdlsoap:operation soapAction=""/>
+
+         <wsdl:input name="GetGeneInfoRequest">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:input>
+
+         <wsdl:output name="GetGeneInfoResponse">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:output>
+
+      </wsdl:operation>
+
+      <wsdl:operation name="GetFileList">
+
+         <wsdlsoap:operation soapAction=""/>
+
+         <wsdl:input name="GetFileListRequest">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:input>
+
+         <wsdl:output name="GetFileListResponse">
+
+            <wsdlsoap:body use="literal"/>
+
+         </wsdl:output>
+
+      </wsdl:operation>
+
+   </wsdl:binding>
+
+   <wsdl:service name="FileServiceService">
+
+      <wsdl:port binding="impl:FileServiceSoapBinding" name="FileService">
+
+         <wsdlsoap:address location="http://localhost:8080/services/PPP_Services/FileService"/>
+
+      </wsdl:port>
+
+   </wsdl:service>
+
+</wsdl:definitions>

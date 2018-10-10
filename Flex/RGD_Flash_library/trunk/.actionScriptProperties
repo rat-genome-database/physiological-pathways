@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<actionScriptProperties analytics="false" mainApplicationPath="RGD flash library.as" projectUUID="73645141-996b-4429-bd38-b82507b88377" version="6">
+  <compiler additionalCompilerArguments="-locale en_US  -define+=FLEX_TARGET_VERSION::flex4,false -define+=FLEX_TARGET_VERSION::flex3,true -dump-config c:\temp\config_sdk.xml" autoRSLOrdering="true" copyDependentFiles="false" flex3CompatMode="false" flexSDK="Flex 3.5" fteInMXComponents="false" generateAccessible="false" htmlExpressInstall="true" htmlGenerate="false" htmlHistoryManagement="false" htmlPlayerVersionCheck="true" includeNetmonSwc="false" outputFolderPath="bin" sourceFolderPath="src" strict="true" targetPlayerVersion="10.0.0" useApolloConfig="false" useDebugRSLSwfs="true" verifyDigests="true" warn="true">
+    <compilerSourcePath/>
+    <libraryPath defaultLinkType="0">
+      <libraryPathEntry kind="1" linkType="1" path="libs"/>
+      <libraryPathEntry kind="4" path="">
+        <excludedEntries>
+          <libraryPathEntry kind="3" linkType="1" path="${PROJECT_FRAMEWORKS}/libs/flex.swc" useDefaultLinkType="false"/>
+        </excludedEntries>
+      </libraryPathEntry>
+    </libraryPath>
+    <sourceAttachmentPath/>
+  </compiler>
+  <applications>
+    <application path="RGD flash library.as"/>
+    <application path="SVGImage.mxml"/>
+  </applications>
+  <modules>
+    <module application="src/RGD flash library.as" destPath="edu/mcw/hmgc/rgd/graphics/SVGImage.swf" optimize="true" sourcePath="src/edu/mcw/hmgc/rgd/graphics/SVGImage.mxml"/>
+    <module application="src/RGD flash library.as" destPath="com/roguedevelopment/flowchart/links/BaseLink.swf" optimize="true" sourcePath="src/com/roguedevelopment/flowchart/links/BaseLink.mxml"/>
+    <module application="src/RGD flash library.as" destPath="edu/mcw/hmgc/rgd/diagrammer/shapes/SVGShape.swf" optimize="true" sourcePath="src/edu/mcw/hmgc/rgd/diagrammer/shapes/SVGShape.mxml"/>
+    <module application="src/RGD flash library.as" destPath="edu/mcw/hmgc/rgd/diagrammer/DegrafaHandle.swf" optimize="true" sourcePath="src/edu/mcw/hmgc/rgd/diagrammer/DegrafaHandle.mxml"/>
+    <module application="src/RGD flash library.as" destPath="edu/mcw/hmgc/rgd/popups/TextEditor.swf" optimize="true" sourcePath="src/edu/mcw/hmgc/rgd/popups/TextEditor.mxml"/>
+  </modules>
+  <buildCSSFiles/>
+</actionScriptProperties>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="PhysiologicalPathwayPortal" basedir="." default="buildall">
+    <!-- file description -->
+    <description>Build Script</description>
+
+    <!--location of property file -->
+    <property file="./build.properties"
+        description="properities for builds" />
+
+   <target name="clean">
+    <delete dir="${output.dir}" failOnError="false" includeEmptyDirs="true" />
+   </target>
+
+   <target name="RGD_Flash_library">
+        <ant dir="${RGD_Flash_library.dir}"/>
+   </target>
+
+   <target name="PPP_Player" depends="RGD_Flash_library">
+        <ant dir="${PPP_Player.dir}"/>
+   </target>
+
+   <target name="PPP_Designer" depends="RGD_Flash_library">
+        <ant dir="${PPP_Designer.dir}"/>
+   </target>
+   
+   <target name="get_swf_files" depends="clean">
+    <mkdir dir="${output.dir}" />
+	<copy todir="${output.dir}" includeemptydirs="false" overwrite="true">
+	  <fileset dir="${PPP_Player.dir}/${SWF_output.dir}"/>
+	  <fileset dir="${PPP_Designer.dir}/${SWF_output.dir}"/>
+	</copy>
+   </target>
+
+   <target name="buildall" depends="PPP_Player,PPP_Designer,get_swf_files"/>
+
+</project>

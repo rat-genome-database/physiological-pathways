@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" 
+				layout="vertical" 
+				width="600" 
+				height="400" 
+				horizontalAlign="center" 
+				
+				verticalAlign="top"
+				backgroundColor="#F0F0F0"
+				backgroundAlpha="1.0"
+				borderColor="#F0F0F0"
+				borderAlpha="1.0"
+				cornerRadius="0"
+				dropShadowEnabled="false"
+				showCloseButton="false"
+				close="titleWindow_close(event)" 
+				creationComplete="init()" show="titlewindow1_showHandler(event)" xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*">
+	<controls:RichTextEditor id="editor" title="Edit Text" width="100%" height="90%">
+	</controls:RichTextEditor>
+	
+	<mx:Script>
+		<![CDATA[
+			import flash.desktop.Clipboard;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			[Bindable]
+			private var _editorBackground:uint = 0xffffff;
+			
+			[Bindable]
+			private var _editorPickedColor:uint = 0;
+			
+			private static var _instance:TextEditor = new TextEditor();
+			
+			private var _oriHtmlText:String;
+			
+			private var _watcher:ChangeWatcher;
+			
+			private var _doNext:Function=null;
+			
+			public function set doNext(do_next:Function):void
+			{
+				_doNext = do_next;
+			}
+			
+			private function init():void
+			{
+				editor.textArea.setStyle("backgroundColor", _editorBackground);
+				editor.colorPicker.selectedColor = _editorPickedColor;
+				editor.textArea.setStyle("color", _editorPickedColor);
+				editor.textArea.setFocus();
+			}
+			
+			public function set htmlText(value:String):void {
+				editor.htmlText = value;
+				_oriHtmlText = value;
+			}
+			
+			public function get htmlText():String {
+				return editor.htmlText;
+			}
+			
+			public function unbind():void
+			{
+				if (_watcher != null) _watcher.unwatch();
+			}
+			
+			protected function button_cancel_clickHandler(event:MouseEvent):void
+			{
+				_doNext(_oriHtmlText);
+				closeWindow();
+			}
+			
+			private function titleWindow_close(evt:CloseEvent):void {
+				closeWindow();
+			}
+			
+			protected function button_ok_clickHandler(event:MouseEvent):void
+			{
+				_doNext(editor.htmlText);
+				closeWindow();
+			}
+			
+			public function closeWindow():void 
+			{
+				unbind();
+				PopUpManager.removePopUp(this)
+			}
+			
+			public function bind(obj:Object, pro:String):void {
+				unbind();
+				_watcher = BindingUtils.bindProperty(obj, pro, editor, "htmlText");
+			}
+			
+			protected function titlewindow1_showHandler(event:FlexEvent):void
+			{
+				init();
+			}
+			
+			public function set editorBackground(bk_color:uint):void
+			{
+				_editorBackground = bk_color;
+				if (editor == null || editor.textArea == null) return;
+				editor.textArea.setStyle("backgroundColor", bk_color);
+				editor.textArea.setStyle("color", _editorPickedColor);
+			}
+			
+			public function set editorPickedColor(picked_color:uint):void
+			{
+				_editorPickedColor = picked_color;
+				if (editor == null || editor.textArea == null) return;
+				editor.colorPicker.selectedColor = _editorPickedColor;
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Canvas width="100%" height="10%" >
+		<mx:Button label="OK" id="button_ok" click="button_ok_clickHandler(event)" x="106" y="2"/>
+		<mx:Button label="Cancel" id="button_cancel" click="button_cancel_clickHandler(event)" x="184" y="2"/>
+	</mx:Canvas>
+</mx:TitleWindow>

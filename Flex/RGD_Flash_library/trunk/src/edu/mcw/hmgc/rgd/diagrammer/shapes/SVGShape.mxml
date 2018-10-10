@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BasicShape xmlns="edu.mcw.hmgc.rgd.diagrammer.shapes.*" 
+			xmlns:mx="http://www.adobe.com/2006/mxml"
+			xmlns:degrafa="com.degrafa.*"
+			width="50" height="50" xmlns:degrafa1="http://www.degrafa.com/2007"
+			xmlns:rgd="edu.mcw.hmgc.rgd.graphics.*"> 
+	
+	<mx:Script>
+		<![CDATA[
+			import com.degrafa.Surface;
+			
+			import edu.mcw.hmgc.rgd.graphics.SVGImage;
+			import edu.mcw.hmgc.rgd.utils.ImageEntry;
+			import edu.mcw.hmgc.rgd.utils.SVGParser1;
+			import edu.mcw.hmgc.rgd.utils.StrUtil;
+			import edu.mcw.hmgc.rgd.utils.XMLUtils;
+			import edu.mcw.hmgc.rgd.utils.libraries.ImageLibrary;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.controls.Text;
+			
+			private var _imageName:String = new String();
+			public var mainSurface:Surface = new Surface();
+			public var svg_image:SVGImage = new SVGImage();
+			
+			private var _imageEntry:ImageEntry;
+			
+			private var change:ChangeWatcher;
+			
+			public function BasicShape():void {
+				svg_image.maintainAspectRatio = false;
+			}
+			
+			public function get type():String
+			{
+				return StrUtil.getToken(ImageLibrary.getImage(_imageName).name);
+			}
+			
+			public function set imageName(value:String):void {
+				_imageName = value;
+			}			
+			
+			private function setImage():void {
+				_imageEntry = ImageLibrary.getImage(_imageName);
+				change = BindingUtils.bindSetter(setXML, _imageEntry, "svgBase");
+				addWatcher(change);
+			}
+			
+			private function setXML(value:SVGParser1):void {
+				if (value == null) return;
+				svg_image.parser = value;
+				if (change != null) 
+				{
+					change.unwatch();
+					change = null;	
+				}
+			} 
+			
+			override protected function initShape() : void {
+				this.addChildAt(mainSurface, 0);
+				mainSurface.enabled = false;
+				mainSurface.addChild(svg_image);
+				mainSurface.setStyle("width", "100%");
+				mainSurface.setStyle("height", "100%");
+				addWatcher(BindingUtils.bindProperty(svg_image, "svgWidth", this, "width"));
+				addWatcher(BindingUtils.bindProperty(svg_image, "svgHeight", this, "height"));
+				
+				if (_imageName.length > 0) 
+				{
+					setImage();
+					if (svg_image.svgFill != null || svg_image.svgFillColor == 1) 
+						svg_image.svgFillColor = svg_image.svgFillColor;
+					if (svg_image.svgStroke != null) svg_image.svgStrokeColor = svg_image.svgStrokeColor;
+					if (svg_image.svgStrokeWeight >= 0) svg_image.svgStrokeWeight = svg_image.svgStrokeWeight;
+				};
+				
+				super.initShape();
+			}
+			
+			public function get properties():XMLList
+			{
+				var xml_str:String = new String();
+				
+				xml_str += XMLUtils.getXML("imageName", _imageName);
+				xml_str += XMLUtils.getXML("model", model.properties.toXMLString());
+				xml_str += glowXML;
+				xml_str += XMLUtils.getHtmlXML("html_text", shapeLabel);
+				if (svg_image.svgFill != null || svg_image.svgFillColor == 1)
+				{
+					xml_str += XMLUtils.getXML("fill", svg_image.svgFillColor.toString());	
+				};
+//				if (svg_image.svgStroke != null) xml_str += XMLUtils.getXML("stroke", svg_image.svgStrokeColor.toString());
+//				if (svg_image.svgStroke != null && svg_image.svgStrokeWeight >= 0)
+//					xml_str += XMLUtils.getXML("weight", svg_image.svgStrokeWeight.toString());
+				xml_str += XMLUtils.getXML("stroke", svg_image.svgStrokeColor.toString());
+				xml_str += XMLUtils.getXML("weight", svg_image.svgStrokeWeight.toString());
+				if (svg_image.svgStrokeGapOnLen > 0 && svg_image.svgStrokeGapOffLen > 0) {
+					xml_str += XMLUtils.getXML("gap_on", svg_image.svgStrokeGapOnLen.toString());
+					xml_str += XMLUtils.getXML("gap_off", svg_image.svgStrokeGapOffLen.toString());
+				}
+				return new XMLList(xml_str); 
+			}
+			
+			public override function set properties(value:XMLList):void
+			{
+				super.properties = value;	
+				imageName = value.imageName.toString();
+				shapeLabel = value.html_text.toString();
+				glow = value.glowColor.toString();
+				if (model == null) model = new BasicShapeModel();
+				model.properties = value.model;
+				x = model.x;
+				y = model.y;
+				width = model.width;
+				height = model.height;
+				adjustToModel();
+				if ("fill" in value) svg_image.svgFillColor = value.fill;
+				if ("stroke" in value) svg_image.svgStrokeColor = value.stroke;
+				if ("weight" in value) svg_image.svgStrokeWeight = value.weight;
+				if ("gap_on" in value) {
+					svg_image.svgStrokeGapOnLen = value.gap_on;	
+					svg_image.svgStrokeGapOffLen = value.gap_off;	
+				}
+			}
+			
+			public override function set maintainAspectRatio(value:Boolean):void
+			{
+				_maintainAspectRatio = value;
+				svg_image.maintainAspectRatio = value;
+			}
+			
+			public override function cleanUpMemory():void
+			{
+				_imageEntry = null;
+				change = null;
+				mainSurface.removeChild(svg_image);
+				svg_image.removeAllChildren();
+				svg_image = null;
+				removeAllChildren();
+				mainSurface = null;
+				super.cleanUpMemory();
+				_imageName = null;
+			}
+		]]>
+	</mx:Script>
+	
+	</BasicShape>

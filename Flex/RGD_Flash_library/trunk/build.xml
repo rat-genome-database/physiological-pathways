@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Build File" basedir="." default="compileProject">
+
+    <!-- Set Up    ============================================== -->
+
+    <!-- file description -->
+    <description>Build Script</description>
+
+    <property environment="env"/>
+    <property name="FLEX_HOME" value="${env.FLEX_HOME}"/>
+    <!--location of property file -->
+    <property file="./build.properties"
+        description="properities for builds" />
+
+    <!-- timestamp -->
+    <tstamp>
+        <format property="timestamp" pattern="yyyyMMdd" />
+    </tstamp>
+
+    <!-- additional tasks -->
+    <taskdef resource="flexTasks.tasks" classpath="${FlexTasks.file}"/>
+
+    <!-- ======================================================== -->
+
+
+    <!-- Compile Project    ===================================== -->
+    <target name="compileProject"
+        depends="cleanDeploy,copyNonEmbeddedFiles,compileLibraries"
+        description="compiles application"/>
+
+    <target name="cleanDeploy" description="Cleans the deploy file">
+        <echo>Deleting Deploy Directory...</echo>
+        <delete dir="${Deploy.dir}" failOnError="false"
+            includeEmptyDirs="true" />
+        <echo>Deleted Deploy Directory</echo>
+        <echo>Creating Deploy Directory...</echo>
+        <mkdir dir="${Deploy.dir}" />
+        <echo>Created Deploy Directory</echo>
+    </target>
+
+
+    <!-- NONEMBEDDED FILES ====================================== -->
+    <target name="copyNonEmbeddedFiles">
+        <echo>Deleting Deploy Assets Directory...</echo>
+        <delete dir="${DeployAssets.dir}" failOnError="false" includeEmptyDirs="true" />
+        <echo>Deleted Deploy Assets Directory</echo>
+        <echo>Creating Assets Folder</echo>
+        <mkdir dir="${DeployAssets.dir}"/>
+        <echo>Created Assets Folder</echo>
+        <echo>Copy Nonembedded Resources To Deploy</echo>
+        <copy todir="${DeployAssets.dir}" includeemptydirs="false" overwrite="true">
+            <fileset dir="${Assets.dir}"/>
+        </copy>
+        <echo>Copied Nonembedded Resources To Deploy</echo>
+    </target>
+    <!-- ======================================================== -->
+
+    <!-- COMPILE LIBRARIES ====================================== -->
+    <target name="compileLibraries" depends="cleanDeploySWCs,compileLibrary" />
+
+    <target name="cleanDeploySWCs">
+        <echo>Deleting Deploy SWC Directory...</echo>
+        <delete dir="${DeploySWC.dir}" failOnError="false" includeEmptyDirs="true"/>
+        <echo>Deleted Deploy SWC Directory</echo>
+        <echo>Creating Deploy SWC Directory...</echo>
+        <mkdir dir="${DeploySWC.dir}"/>
+        <echo>Created Deploy SWC Directory</echo>
+    </target>
+
+    <target name="compileLibrary" description="compiles the Library">
+        <echo>Compiling Library SWC To Deploy SWC Folder</echo>
+        <echo>${basedir}</echo>
+        <compc debug="${Debug.Boolean}" output="${basedir}/${DeploySWC.dir}/${Library.name}.swc" locale="en_US">
+            <load-config filename="${basedir}/${Application.name}_config.xml"/>
+            <source-path path-element="${basedir}/${LibrarySrc.dir}"/>
+            <include-sources dir="${basedir}/${LibrarySrc.dir}" includes="*"/>
+            <compiler.library-path dir="${basedir}/${LibraryLibs.dir}/" append="true">
+                <include name="*.swc"/>
+            </compiler.library-path>
+            <metadata>
+                <creator>Weisong Liu</creator>
+                <publisher>RGD</publisher>
+                <language>EN</language>
+            </metadata>
+        </compc>
+        <echo>Compiled Library SWC To Deploy SWC Folder</echo>
+    </target>
+
+    <!-- ======================================================== -->
+
+</project>

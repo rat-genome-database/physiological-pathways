@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" 
+				layout="absolute" width="380" height="192" 
+				title="Edit Layers" 
+				xmlns:flexlib="http://code.google.com/p/flexlib/"
+				xmlns:popups="edu.mcw.hmgc.rgd.popups.*"
+				creationComplete="init()" backgroundColor="#EAE8E8" xmlns:controls="flexlib.controls.*"
+				showCloseButton="true" close="visible=false">
+	<mx:Script>
+		<![CDATA[
+			import com.famfamfam.silk.IconLibrary;
+			
+			import edu.mcw.hmgc.rgd.diagrammer.Diagram;
+			import edu.mcw.hmgc.rgd.utils.DiagramLibrary;
+			import edu.mcw.hmgc.rgd.utils.grouping.Layer;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.DataGridEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+
+			private var _mainDiagram:Diagram = null;
+			private var _editedLayer:Object = null;
+
+			public function get mainDiagram():Diagram
+			{
+				return _mainDiagram;
+			}
+
+			public function set mainDiagram(value:Diagram):void
+			{
+				_mainDiagram = value;
+				_layerArray = new ArrayCollection();
+				for (var id:int=0; id < _mainDiagram.layers.layers.length; id ++)
+				{
+					var layer:Layer = _mainDiagram.layers.layers[id];
+					loadLayer(layer, id);					
+				}
+				dataProvider = _layerArray;
+			}
+
+			private function loadLayer(layer:Layer, id:int):void
+			{
+				var obj_tmp:Array = new Array();
+				obj_tmp.push(layer.label); //0
+				obj_tmp.push(true);  //1
+				obj_tmp.push(id);    //2
+				obj_tmp.push(layer.description);
+				_layerArray.addItem(obj_tmp);
+			}
+				
+			protected var _layerArray:ArrayCollection = null;
+			protected var _dataProvider:Object = null;
+			public function set dataProvider(provider:Object):void
+			{
+				_dataProvider = provider;
+				if (provider == null || layerList == null) return;
+				layerList.dataProvider = provider;
+//				layerList.dispatchEvent(new DataGridEvent
+//					(
+//						DataGridEvent.HEADER_RELEASE,
+//						false,
+//						true,
+//						0,	// The zero-based index of the column to sort in the DataGrid object's columns array.
+//						null,
+//						0,
+//						null,
+//						null,
+//						0
+//					)
+//				);
+			}
+			
+			protected var _nextFunction:Function = null;
+			public function set nextFunction(value:Function):void
+			{
+				_nextFunction = value;
+			}
+			
+			private var _showInputBox:Boolean = true;
+			[Bindable]
+			public function get showInputBox():Boolean
+			{
+				return _showInputBox;
+			}
+			public function set showInputBox(value:Boolean):void
+			{
+				_showInputBox = value;
+			}
+			
+			protected function init():void
+			{
+				addEventListener("showLayers", refreshLayers);
+				addEventListener("labelChanged", updateLabels);
+				addEventListener("descriptionChanged", updateDescriptions);
+				addEventListener("startEditing", startEditing);
+				addEventListener("stopEditing", stopEditing);
+				
+				if (_dataProvider != null) dataProvider = _dataProvider;
+			}
+			
+			protected function startEditing(event:Event=null):void
+			{
+				layerEditBegin(event.target);
+			}
+			
+			protected function stopEditing(event:Event=null):void
+			{
+				layerEditEnd();
+			}
+			
+			protected function layerEditBegin(target:Object):void
+			{
+				layerEditEnd();
+				_editedLayer = target;
+				target.data[1] = true;
+				dataProvider = _layerArray;
+				refreshLayers();
+				layerList.selectedIndex = _editedLayer.data[2];
+				_mainDiagram.editLayer(_editedLayer.data[2]);
+			}
+			
+			protected function layerEditEnd():void
+			{
+				if (_editedLayer == null) return;
+				_editedLayer.selected = false;
+				_mainDiagram.finishEditLayer();
+				_editedLayer = null;
+			}
+			
+			protected function updateLabels(event:Event):void
+			{
+				if (event != null) event.stopPropagation();
+				layerEditEnd();
+				var id:int = event.target.data[2];
+				_mainDiagram.layers.layers[id].label = event.target.data[0];
+			}
+			
+			protected function updateDescriptions(event:Event):void
+			{
+				if (event != null) event.stopPropagation();
+				layerEditEnd();
+				var id:int = event.target.data[2];
+				_mainDiagram.layers.layers[id].description = event.target.data[3];
+			}
+			
+			protected function list1_changeHandler(event:ListEvent):void
+			{
+			}
+			
+			protected function buttonCancel_clickHandler(event:MouseEvent):void
+			{
+				closeWindow();
+			}
+			
+			protected function closeWindow():void 
+			{
+				layerEditEnd();
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function buttonOK_clickHandler(event:MouseEvent):void
+			{
+				closeWindow();
+				doNext();
+			}
+			
+			protected function doNext():void
+			{
+				if (_nextFunction != null)
+				{
+//					_nextFunction(fileNameInput.text);
+				}
+			}
+			
+			protected function existingFiles_doubleClickHandler(event:MouseEvent):void
+			{
+				if (event.currentTarget.selectedItem == null) return;
+//				buttonOK.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+			}
+			
+			protected function refreshLayers(event:Event=null):void
+			{
+				if (event != null) event.stopPropagation();
+				var layers_to_show:Array = [];
+				for (var id:int = 0; id < _layerArray.length; id++)
+				{
+					var layer_tmp:Array = _layerArray[id];
+					if (layer_tmp[1]) layers_to_show.push(id);
+				}
+				_mainDiagram.showLayers(layers_to_show);
+			}
+
+			protected function delete_clickHandler(event:MouseEvent):void
+			{
+				if (layerList.selectedIndex < 0 || layerList.selectedIndex > _layerArray.length - 1) return;
+				var layer_tmp:Array = _layerArray[layerList.selectedIndex];
+				_mainDiagram.deleteLayer(layer_tmp[2]);
+				_layerArray.source.splice(layerList.selectedIndex, 1);
+				dataProvider = _layerArray;
+				refreshLayers();				
+			}
+
+			protected function add_clickHandler(event:MouseEvent):void
+			{
+				var new_layer:Layer = _mainDiagram.addLayer();
+				new_layer.label = "new layer";
+				loadLayer(new_layer, _layerArray.length);
+				dataProvider = _layerArray;
+				layerList.selectedIndex = _layerArray.length - 1;
+				layerList.addEventListener("updateComplete", scrollToLast);
+			}
+
+			protected function scrollToLast(event:Event):void
+			{
+				layerList.removeEventListener("updateComplete", scrollToLast);
+				layerList.scrollToIndex(_layerArray.length);
+			}
+		]]>
+	</mx:Script>
+			<mx:DataGrid id="layerList" sortableColumns="false"  
+						 width="100%" height="116" borderStyle="inset" 
+						 fontSize="12" fontFamily="Arial" 
+						 allowMultipleSelection="false" editable="true">
+				<mx:columns>
+					<mx:DataGridColumn width="10" editable="false" backgroundColor="#EEEEEE" >
+						<mx:itemRenderer>
+							<mx:Component>
+								<mx:CheckBox selected="{data[1]}" change="checkbox1_changeHandler(event)" toolTip="Show layer">
+									<mx:Script>
+										<![CDATA[
+											protected function checkbox1_changeHandler(event:Event):void
+											{
+												data[1] = selected;
+												dispatchEvent(new Event("showLayers", true));
+											}
+										]]>
+									</mx:Script>
+								</mx:CheckBox>
+							</mx:Component>
+						</mx:itemRenderer>
+					</mx:DataGridColumn>
+					
+					<mx:DataGridColumn width="12" editable="false" backgroundColor="#EEEEEE" >
+						<mx:itemRenderer>
+							<mx:Component>
+								<mx:Button icon="{IconLibrary.COMMENT_EDIT}" toolTip="Edit description" click="button1_clickHandler(event)">
+									<mx:Script>
+										<![CDATA[
+											import com.famfamfam.silk.IconLibrary;
+											
+											import edu.mcw.hmgc.rgd.utils.XMLUtils;
+											
+											import mx.managers.PopUpManager;
+
+											protected function button1_clickHandler(event:MouseEvent):void
+											{			
+												var _textEditor:TextEditorDialog = new TextEditorDialog();
+												_textEditor.doNext = getResult;
+
+												_textEditor.editorBackground = 0x444477;
+												_textEditor.editorPickedColor = 0xffffff;
+												_textEditor.width = 600;
+												_textEditor.height = 400;
+												PopUpManager.addPopUp(_textEditor, this.parent, true);
+												
+												if (_textEditor.editor != null) 
+												{
+													_textEditor.htmlText  = data[3];
+												}
+												
+											}
+											
+											protected function getResult(returned_str:String):void 
+											{
+												data[3] = returned_str;
+												this.dispatchEvent(new Event("descriptionChanged", true, true));
+											}
+											
+
+										]]>
+									</mx:Script>
+									
+								</mx:Button>
+							</mx:Component>
+							
+						</mx:itemRenderer>
+					</mx:DataGridColumn>
+					
+					<mx:DataGridColumn width="14" editable="false" backgroundColor="#EEEEEE" >
+						<mx:itemRenderer> 
+							<mx:Component>
+								<mx:Button icon="{IconLibrary.APPLICATION_FORM_EDIT}" toolTip="Edit components" change="button2_clickHandler(event)"
+										   toggle="true">
+									<mx:Script>
+										<![CDATA[
+											import com.famfamfam.silk.IconLibrary;
+
+											protected function button2_clickHandler(event:Event):void
+											{
+												var tmp_event:Event;
+												if (selected) 
+												{
+													tmp_event = new Event("startEditing", true);
+												} 
+												else
+												{
+													tmp_event = new Event("stopEditing", true);
+												}
+												dispatchEvent(tmp_event);													
+											}
+
+										]]>
+									</mx:Script>
+									
+								</mx:Button>
+							</mx:Component>
+							
+						</mx:itemRenderer>
+					</mx:DataGridColumn>
+
+					
+					<mx:DataGridColumn headerText="Layer Name" dataField="0" width="100" editable="true" backgroundColor="#EEEEEE" 
+									   editorHeightOffset="-6" editorWidthOffset="-4" editorXOffset="1" editorYOffset="3" 
+									   editorUsesEnterKey="true">
+						<mx:itemEditor>
+							<mx:Component>
+								<mx:TextInput editable="false" enter="textinput1_focusOutHandler(event)" click="textinput1_clickHandler(event)" focusOut="textinput1_focusOutHandler(event)">
+									
+									<mx:Script>
+										<![CDATA[
+											protected function textinput1_clickHandler(event:MouseEvent):void
+											{
+												if (!editable)
+												{
+													selectionBeginIndex = selectionEndIndex = text.length;
+													editable=true;				
+													this.setStyle('backgroundColor', 0xFFFFFF);
+												}
+											}
+											
+											protected function textinput1_focusOutHandler(event:Event):void
+											{
+												data[0] = text;
+												dispatchEvent(new Event("labelChanged", true));
+												editable = false;
+												this.setStyle('backgroundColor', 0xDDDDDD);
+											}
+										]]>
+									</mx:Script>
+									
+									
+								</mx:TextInput>
+							</mx:Component>
+						</mx:itemEditor>
+					</mx:DataGridColumn>
+					
+<!--					
+					<mx:DataGridColumn width="12">
+						<mx:itemRenderer> 
+							<mx:Component>
+								<mx:Button icon="{IconLibrary.TEXTFIELD_RENAME}" toolTip="Rename">
+									<mx:Script>
+										<![CDATA[
+											import com.famfamfam.silk.IconLibrary;
+										]]>
+									</mx:Script>
+									
+								</mx:Button>
+							</mx:Component>
+							
+						</mx:itemRenderer>
+					</mx:DataGridColumn>
+-->					
+					
+				</mx:columns>
+			</mx:DataGrid>
+	
+	<mx:Button id="butAdd" icon="{IconLibrary.ADD}"  x="10" y="123" click="add_clickHandler(event)"/>
+	<mx:Button id="butDelete" icon="{IconLibrary.DELETE}"  x="313" y="123" click="delete_clickHandler(event)"/>
+<!--
+	<mx:Button id="butEdit" icon="{IconLibrary.APPLICATION_FORM_EDIT}"  x="258" y="123" click="edit_clickHandler(event)"/>
+
+-->
+</mx:TitleWindow>

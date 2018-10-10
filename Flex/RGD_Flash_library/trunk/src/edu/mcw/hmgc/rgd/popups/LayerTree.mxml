@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="300" xmlns:degrafa="com.degrafa.*"
+				creationComplete="init()" xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*"
+				close="titlewindow1_closeHandler(event)" showCloseButton="false" backgroundAlpha=".1"
+				borderThicknessLeft="1" borderThicknessRight="1"
+				borderThicknessTop="5"  headerHeight="10" headerColors="[#FFFFFF,#000000]" 
+				height="180"
+				horizontalScrollPolicy="off" xmlns:rgd="edu.mcw.hmgc.rgd.*"
+				verticalScrollPolicy="off">
+	
+	<mx:Script>
+		<![CDATA[
+			import caurina.transitions.Tweener;
+			
+			import edu.mcw.hmgc.rgd.graphics.ShowHideEffects;
+			import edu.mcw.hmgc.rgd.ui.controls.ListItemRender;
+			
+			import mx.collections.XMLListCollection;
+			import mx.controls.Alert;
+			import mx.controls.ToolTip;
+			import mx.controls.listClasses.ListItemRenderer;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.events.ToolTipEvent;
+			import mx.events.TreeEvent;
+			import mx.managers.PopUpManager;
+			import mx.managers.ToolTipManager;
+			import mx.rpc.events.HeaderEvent;
+			
+			protected var  _singleToolTip:ToolTip;
+	
+			public function set changeHandler(value:Function):void
+			{
+				tree.addEventListener(ListEvent.CHANGE, value);
+			}
+			
+			public function set rollOverHandler(value:Function):void
+			{
+				tree.addEventListener(ListEvent.ITEM_ROLL_OVER, value);
+			}
+			
+			public function set rollOutHandler(value:Function):void
+			{
+				tree.addEventListener(ListEvent.ITEM_ROLL_OUT, value);
+			}
+			
+			public function init():void
+			{
+				titleBar.buttonMode = true; 
+				titleBar.useHandCursor = true; 
+				titleTextField.mouseEnabled = false; 
+				
+				// Slide-in the popup
+				// Slide-in the popup
+//				var dest_x:Number = x - width;
+//				alpha = 0;
+//				Tweener.addTween(this, {alpha:1, x:dest_x, time:1});
+//
+				x = -width;
+				var dest_x:Number = 5;
+				alpha = 0;
+				Tweener.addTween(this, {alpha:1, x:dest_x, time:1});
+			}
+			
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				// Fade out the popup
+				removeItemDescription();
+				Tweener.addTween(this, {alpha:0, time:1, onComplete:closeWindow});
+			}
+			
+			protected function closeWindow():void
+			{
+				removeItemDescription();
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function expandAllNodes():void
+			{
+				for (var i:int = 0; i < tree.dataProvider.length; i ++){ 
+					tree.expandChildrenOf(tree.dataProvider[i], true) 
+				} 
+			}
+
+			public function set dataProvider(value:Object):void
+			{
+				tree.dataProvider = value.layer_group;
+				tree.height = 200;
+				tree.validateNow();
+				expandAllNodes();
+				width = tree.measureWidthOfItems() + 20;
+				height = tree.rowHeight * tree.maxRowCount + 20;
+			}
+			
+			public function get dataProvider():Object
+			{
+				return tree.dataProvider;
+			}
+
+			protected function tree_itemCloseHandler(event:TreeEvent):void
+			{
+				adjustHeightAccordingToTree();
+			}
+
+			protected function tree_itemOpenHandler(event:TreeEvent):void
+			{
+				adjustHeightAccordingToTree();
+				checkLeafSelection();
+			}
+
+			protected function adjustHeightAccordingToTree():void
+			{
+				height = tree.rowHeight * tree.maxRowCount + 20;
+			}
+			
+			public function checkLeafSelection():Boolean
+			{
+				with (tree)
+				{
+					if (selectedItem == null) return false;
+					if (selectedItem.localName() == "layer_group")
+					{
+						if (!isItemOpen(selectedItem))
+						{
+							expandItem(selectedItem, true);
+							adjustHeightAccordingToTree();
+						}
+						
+//						selectedIndex ++;
+						return false;
+					}
+					return true;
+				}
+			}
+			
+			public function showItemDescription(html_text:String, item_x:Number, item_y:Number):void
+			{
+				removeItemDescription();
+				if (html_text == null || html_text.length == 0)return;
+				_singleToolTip = ToolTipManager.createToolTip(html_text, item_x + x, item_y + y, "errorTipRight") as ToolTip;
+				_singleToolTip.y += 10;
+				_singleToolTip.x += (width - 5);
+				//setToolTipStyle();
+			}
+
+			public function removeItemDescription(event:Event=null):void
+			{
+				if (_singleToolTip != null) {
+					ToolTipManager.destroyToolTip(_singleToolTip);
+					_singleToolTip = null;
+				}
+			}
+			
+			public function fadeOutItemDescription():void
+			{
+				if (_singleToolTip != null) {
+					ShowHideEffects.hangAround(_singleToolTip);
+					_singleToolTip.addEventListener(ToolTipEvent.TOOL_TIP_END, function():void{
+						_singleToolTip = null;
+					});
+				}
+			}
+			
+			public override function set visible(value:Boolean):void
+			{
+				super.visible = value;
+				removeItemDescription();
+			}
+		]]>
+	</mx:Script>
+	<mx:Style>
+		ToolTip{
+			font-family: arial;
+			font-size: 12px;
+			color: #000000;
+			background-color: #FFFFFF;
+			background-alpha: 0.85;
+		}
+	</mx:Style>	
+
+	<rgd:Tree id="tree" width="100%" rowCount="{tree.dataProvider.length}"
+			 backgroundAlpha=".3" 
+			 selectionColor="#FFFFCC" selectionDuration="2" 
+			 rollOverColor="#FFFFFF" 
+			 verticalScrollPolicy="off" 
+			 horizontalScrollPolicy="off"
+			 labelField="@label"
+			 showRoot="true"
+			 indentation="5"
+			 itemClose="tree_itemCloseHandler(event)"
+			 itemOpen="tree_itemOpenHandler(event)"
+			  fontFamily="Arial" fontSize="12"
+			  itemRenderer="edu.mcw.hmgc.rgd.ui.controls.TreeItemRenderer"/>
+</mx:TitleWindow>

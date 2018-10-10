@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<treeClasses:TreeItemRenderer xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:treeClasses="mx.controls.treeClasses.*"
+							  dataChange="dataChangeHandler(event)">
+
+	<mx:Script>
+		<![CDATA[
+			private function dataChangeHandler(event:Event):void 
+			{
+				if (event.target.data.localName() == "layer_group") setStyle("fontWeight", "bold");
+			}
+		]]>
+	</mx:Script>
+</treeClasses:TreeItemRenderer>

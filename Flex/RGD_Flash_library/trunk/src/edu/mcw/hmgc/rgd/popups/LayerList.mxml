@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="300" xmlns:degrafa="com.degrafa.*"
+				creationComplete="init()" xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*"
+				close="titlewindow1_closeHandler(event)" showCloseButton="false" backgroundAlpha=".1"
+				borderThicknessLeft="1" borderThicknessRight="1"
+				borderThicknessTop="5"  headerHeight="10" headerColors="[#FFFFFF,#000000]" 
+				height="180"
+				horizontalScrollPolicy="off"
+				move="titlewindow1_moveHandler(event)" verticalScrollPolicy="off">
+	
+		
+	<mx:Script>
+		<![CDATA[
+			import caurina.transitions.Tweener;
+			
+			import com.famfamfam.silk.IconLibrary;
+			
+			import edu.mcw.hmgc.rgd.graphics.ShowHideEffects;
+			import edu.mcw.hmgc.rgd.ui.controls.HTMLToolTips;
+			import edu.mcw.hmgc.rgd.ui.controls.ListItemRender;
+			
+			import mx.controls.Alert;
+			import mx.controls.ToolTip;
+			import mx.controls.listClasses.ListItemRenderer;
+			import mx.effects.effectClasses.HideShowEffectTargetFilter;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.events.MoveEvent;
+			import mx.events.ToolTipEvent;
+			import mx.managers.PopUpManager;
+			import mx.managers.ToolTipManager;
+			import mx.rpc.events.HeaderEvent;
+			
+			protected var  _singleToolTip:ToolTip;
+			
+			[Bindable]
+			protected var _tooltipLocked:Boolean = true;
+			
+			public function set changeHandler(value:Function):void
+			{
+				list.addEventListener(ListEvent.CHANGE, value);
+			}
+			
+			public function init():void
+			{
+				titleBar.buttonMode = true; 
+				titleBar.useHandCursor = true; 
+				titleTextField.mouseEnabled = false; 
+				
+				// Slide-in the popup
+//				var dest_x:Number = x - width;
+//				alpha = 0;
+//				Tweener.addTween(this, {alpha:1, x:dest_x, time:1});
+
+//				// Slide-in the popup
+				x = -width;
+				var dest_x:Number = 5;
+				alpha = 0;
+				Tweener.addTween(this, {alpha:1, x:dest_x, time:1});
+				rollOutHandler=hideTooltipCloseButton;
+				rollOverHandler=showTooltipCloseButton;
+			}
+			
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				// Fade out the popup
+				Tweener.addTween(this, {alpha:0, time:1, onComplete:closeWindow});
+			}
+			
+			protected function closeWindow():void
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+
+			public function set dataProvider(value:Object):void
+			{
+				list.dataProvider = value;
+				height = list.rowHeight*list.dataProvider.length + 20;
+				width = list.measureWidthOfItems() + 20;
+			}
+			
+			public function get dataProvider():Object
+			{
+				return list.dataProvider;
+			}
+
+			public function showItemDescription(html_text:String, item_x:Number, item_y:Number):void
+			{
+				removeItemDescription();
+				if (html_text == null || html_text.length == 0)return;
+				_singleToolTip = ToolTipManager.createToolTip(html_text, item_x + list.x + x, item_y + list.y + y, "errorTipRight") as ToolTip;
+				(_singleToolTip.getChildAt(0) as HTMLToolTips).includeCloseButton = true;
+				_singleToolTip.y += 10;
+				_singleToolTip.x += (width - 5);
+				
+				//setToolTipStyle();
+			}
+			
+			public function removeItemDescription(event:Event=null):void
+			{
+				if (_singleToolTip != null) {
+					ToolTipManager.destroyToolTip(_singleToolTip);
+					_singleToolTip = null;
+				}
+			}
+			
+			public function fadeOutItemDescription(event:Event=null):void
+			{
+				if (_singleToolTip != null) {
+					ShowHideEffects.hangAround(_singleToolTip);
+					_singleToolTip.addEventListener(ToolTipEvent.TOOL_TIP_END, function():void{
+						_singleToolTip = null;
+					});
+				}
+			}
+
+			protected function hideTooltipCloseButton(event:Event=null):void
+			{
+				if (_singleToolTip == null) return;
+				ShowHideEffects.hideFadeOut((_singleToolTip.getChildAt(0) as HTMLToolTips).closeButton);
+			}
+			
+			protected function showTooltipCloseButton(event:Event=null):void
+			{
+				if (_singleToolTip == null) return;
+				ShowHideEffects.showFadeIn((_singleToolTip.getChildAt(0) as HTMLToolTips).closeButton);
+			}
+			
+			public override function set visible(value:Boolean):void
+			{
+				super.visible = value;
+				removeItemDescription();
+			}
+
+			public function set rollOverHandler(value:Function):void
+			{
+				list.addEventListener(ListEvent.ITEM_ROLL_OVER, value);
+			}
+			
+			public function set rollOutHandler(value:Function):void
+			{
+				list.addEventListener(ListEvent.ITEM_ROLL_OUT, value);
+			}
+
+			public function set itemClickHandler(value:Function):void
+			{
+				list.addEventListener(ListEvent.ITEM_CLICK, value);
+			}
+			
+			protected function itemDoubleClickHandler(event:Event):void
+			{
+				fadeOutItemDescription();
+			}
+
+			protected function titlewindow1_moveHandler(event:MoveEvent):void
+			{
+				if (_singleToolTip != null)
+				{
+					_singleToolTip.move(_singleToolTip.x + (event.target.x - event.oldX),
+						_singleToolTip.y + (event.target.y - event.oldY));
+				}
+			}
+
+	]]>
+	</mx:Script>
+
+	<controls:List id="list" width="100%" rowCount="{list.dataProvider.length}"
+			 backgroundAlpha=".3" 
+			 itemRenderer="edu.mcw.hmgc.rgd.ui.controls.ListItemRender" 
+			 selectionColor="#03F6F3" selectionDuration="2" 
+			 verticalScrollPolicy="off" 
+			 indicatorAlpha=".7" rowHeight="24"
+			 horizontalScrollPolicy="off"
+			 doubleClickEnabled="true"
+			 doubleClick="itemDoubleClickHandler(event)" height="141" y="0" rollOverColor="#02DBD8"/>
+</mx:TitleWindow>

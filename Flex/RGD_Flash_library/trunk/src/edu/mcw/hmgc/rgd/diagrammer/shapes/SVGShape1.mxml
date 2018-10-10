@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BasicShape xmlns="edu.mcw.hmgc.rgd.diagrammer.shapes.*" 
+			xmlns:mx="http://www.adobe.com/2006/mxml"
+			xmlns:degrafa="com.degrafa.*" 
+			width="50" height="50" xmlns:degrafa1="http://www.degrafa.com/2007"
+			xmlns:rgd="edu.mcw.hmgc.rgd.graphics.*">
+	
+	<mx:Script>
+		<![CDATA[
+			import edu.mcw.hmgc.rgd.graphics.SVGImage;
+			import edu.mcw.hmgc.rgd.graphics.SVGImage1;
+			import edu.mcw.hmgc.rgd.utils.ImageEntry;
+			import edu.mcw.hmgc.rgd.utils.libraries.ImageLibrary;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.containers.Canvas;
+			import mx.controls.Text;
+			
+			private var _svgURL:String = new String();
+			//			public var mainCanvas:Canvas;
+			public var svg_image:SVGImage1 = new SVGImage1();
+			
+			private var image_entry:ImageEntry;
+			
+			private var change:ChangeWatcher;
+			
+			public function BasicShape():void {
+			}
+			
+			
+			public function set svgURL(value:String):void {
+				_svgURL = value;
+				//				initShape();
+			}			
+			
+			private function setImage():void {
+				image_entry = ImageLibrary.getImage(_svgURL);
+				//				svg_image.xmlData = new XML(image_entry.data);
+				change = BindingUtils.bindSetter(setXML, image_entry, "data");
+			}
+			
+			private function setXML(value:String):void {
+				if (value.length == 0) return;
+				svg_image.xmlData = new XML(value);
+				if (change != null) 
+				{
+					change.unwatch();
+					change = null;	
+				}
+			} 
+			
+			override protected function initShape() : void {
+				//super.initShape();
+				svg_image.graphicsTarget = [this];
+				BindingUtils.bindProperty(svg_image, "svgWidth", this, "width");
+				BindingUtils.bindProperty(svg_image, "svgHeight", this, "height");
+				
+				if (_svgURL.length > 0) setImage();
+				
+				super.initShape();
+			}
+			
+		]]>
+	</mx:Script>
+	
+</BasicShape>

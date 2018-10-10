@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="150" height="250" 
+	title="Choose a smiely" showCloseButton="true" creationComplete="init()" close="close(event)"
+	backgroundColor="0xceefef"	
+	styleName="vcTitleWindow"
+	>
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.TextArea;
+			import mx.effects.easing.Back;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.core.UIComponent;
+			
+			public var myParent:UIComponent;
+			public var myTextField:TextArea; //the text field to update
+			
+			public function close(event:Event) :void {
+				PopUpManager.removePopUp(this);
+			}
+			
+			public function init() :void {
+				//create an array of smileys to use as our data provider
+				var smileys:Array = new Array();
+				var names:Array = Smileys.smileyCodes;
+				var values:Array = Smileys.smileys;
+				var len:int = names.length;
+				
+				for (var i:int=0;i<len; i++) {
+					smileys.push ({data:values[i], label:names[i]});
+				}
+				mySmileys.dataProvider=smileys;
+				//DebugWindow.debug("loaded");
+			}
+			
+			public function doClick(event:ListEvent) :void {
+				PopUpManager.removePopUp(this);	
+				myTextField.text+= mySmileys.selectedItem.label;
+				myTextField.setFocus();
+				myTextField.selectionBeginIndex=myTextField.text.length;
+				myTextField.selectionEndIndex=myTextField.text.length;
+
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:TileList id="mySmileys" columnCount="3" width="100%" height="100%" 
+		itemClick="doClick(event)" backgroundAlpha="0" borderStyle="none" selectionColor="0xceefef" >
+		<mx:itemRenderer>
+			<mx:Component>
+				<mx:Image width="20" height="20" source="{data.data}" toolTip="{data.label}" useHandCursor="true" buttonMode="true"/>
+			</mx:Component>
+		</mx:itemRenderer>
+	</mx:TileList>
+</mx:TitleWindow>

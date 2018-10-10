@@ -1,0 +1,784 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" 
+				layout="absolute"
+				backgroundAlpha="1"
+				xmlns:rgd="edu.mcw.hmgc.rgd.*"
+				xmlns:objecthandles="com.roguedevelopment.objecthandles.*"
+				xmlns:degrafa="com.degrafa.*"
+				creationComplete="init()" 
+				horizontalScrollPolicy="off"
+				verticalScrollPolicy="off"
+				xmlns:paint="com.degrafa.paint.*"
+				xmlns:geometry="com.degrafa.geometry.*" 
+				xmlns:repeaters="com.degrafa.repeaters.*" 
+				xmlns:transform="com.degrafa.transform.*" 
+				xmlns:diagrammer="edu.mcw.hmgc.rgd.diagrammer.*" xmlns:graphics="edu.mcw.hmgc.rgd.graphics.*"
+				borderColor="#FFFFFF"
+				backgroundColor="#444444" xmlns:containers="flexlib.containers.*" xmlns:local="*" xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*">
+	<mx:Script>
+		<![CDATA[
+			import caurina.transitions.Tweener;
+			
+			import com.degrafa.GeometryComposition;
+			import com.famfamfam.silk.IconLibrary;
+			import com.roguedevelopment.objecthandles.ObjectChangedEvent;
+			import com.roguedevelopment.objecthandles.ObjectHandles;
+			import com.roguedevelopment.objecthandles.SelectionEvent;
+			
+			import edu.mcw.hmgc.rgd.bio.Relationship;
+			import edu.mcw.hmgc.rgd.diagrammer.CircleHandle;
+			import edu.mcw.hmgc.rgd.diagrammer.Diagram;
+			import edu.mcw.hmgc.rgd.diagrammer.DiagramGroup;
+			import edu.mcw.hmgc.rgd.diagrammer.ObjectSource;
+			import edu.mcw.hmgc.rgd.diagrammer.PhysiologicalPathwayDiagram;
+			import edu.mcw.hmgc.rgd.diagrammer.PointHandle;
+			import edu.mcw.hmgc.rgd.diagrammer.Toolbar;
+			import edu.mcw.hmgc.rgd.diagrammer.events.InnerDiagramEvent;
+			import edu.mcw.hmgc.rgd.diagrammer.links.Arrow;
+			import edu.mcw.hmgc.rgd.diagrammer.links.LinkComponent;
+			import edu.mcw.hmgc.rgd.diagrammer.links.LinkIcon;
+			import edu.mcw.hmgc.rgd.diagrammer.links.ThreePointLink;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.*;
+			import edu.mcw.hmgc.rgd.popups.Loading;
+			import edu.mcw.hmgc.rgd.popups.TextEditor;
+			import edu.mcw.hmgc.rgd.ui.controls.HTMLToolTips;
+			import edu.mcw.hmgc.rgd.utils.Configurations;
+			import edu.mcw.hmgc.rgd.utils.FileLoader;
+			import edu.mcw.hmgc.rgd.utils.FilterUtility;
+			import edu.mcw.hmgc.rgd.utils.GeometryUtil;
+			import edu.mcw.hmgc.rgd.utils.GraphicsUtil;
+			import edu.mcw.hmgc.rgd.utils.ImageEntry;
+			import edu.mcw.hmgc.rgd.utils.ValueChangedEvent;
+			import edu.mcw.hmgc.rgd.utils.WEBUtils;
+			import edu.mcw.hmgc.rgd.utils.events.FileEvent;
+			import edu.mcw.hmgc.rgd.utils.events.LibraryEvent;
+			import edu.mcw.hmgc.rgd.utils.libraries.ImageLibrary;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.controls.Menu;
+			import mx.core.ContainerCreationPolicy;
+			import mx.effects.Parallel;
+			import mx.effects.Resize;
+			import mx.effects.Rotate;
+			import mx.events.IndexChangedEvent;
+			import mx.events.MenuEvent;
+			import mx.events.ResizeEvent;
+			import mx.graphics.Stroke;
+			import mx.managers.PopUpManager;
+			import mx.messaging.messages.ISmallMessage;
+			import mx.printing.FlexPrintJob;
+			
+			import org.alivepdf.layout.Mode;
+			import org.alivepdf.layout.Orientation;
+			import org.alivepdf.layout.Position;
+			import org.alivepdf.layout.Resize;
+			import org.alivepdf.layout.Size;
+			import org.alivepdf.layout.Unit;
+			import org.alivepdf.pdf.PDF;
+			import org.alivepdf.saving.Download;
+			import org.alivepdf.saving.Method;
+
+			[Embed(source='/assets/fonts/GGSUBSCR.TTF', 
+				fontName='Subscript', 
+				mimeType='application/x-font')] 
+			private var subscriptFont:Class;
+			
+			[Embed(source='/assets/fonts/GGSUPERS.TTF', 
+				fontName='Superscript', 
+				mimeType='application/x-font')] 
+			private var superscriptFont:Class;
+			
+			[Embed(source='/assets/fonts/ARIAL.TTF', 
+				fontName='Arial', 
+			    fontStyle='normal',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var arialFont:Class;
+			
+			[Embed(source='/assets/fonts/ARIALBD.TTF', 
+				fontName='Arial', 
+			    fontStyle='normal',
+			    fontWeight='bold',
+				mimeType='application/x-font')] 
+			private var arialBoldFont:Class;
+
+			[Embed(source='/assets/fonts/ARIALI.TTF', 
+				fontName='Arial', 
+			    fontStyle='italic',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var arialItalicFont:Class;
+			
+			[Embed(source='/assets/fonts/ARIALBI.TTF', 
+				fontName='Arial', 
+			    fontStyle='italic',
+			    fontWeight='bold',
+				mimeType='application/x-font')] 
+			private var arialBoldItalicFont:Class;
+			
+			[Embed(source='/assets/fonts/verdana.TTF', 
+				fontName='Verdana', 
+			    fontStyle='normal',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var verdanaFont:Class;
+			
+			[Embed(source='/assets/fonts/verdanab.TTF', 
+				fontName='Verdana', 
+			    fontStyle='normal',
+			    fontWeight='bold',
+				mimeType='application/x-font')] 
+			private var verdanaBoldFont:Class;
+			
+			[Embed(source='/assets/fonts/verdanai.TTF', 
+				fontName='Verdana', 
+			    fontStyle='italic',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var verdanaItalicFont:Class;
+			
+			[Embed(source='/assets/fonts/verdanaz.TTF', 
+				fontName='Verdana', 
+			    fontStyle='italic',
+			    fontWeight='bold',
+				mimeType='application/x-font')] 
+			private var verdanaBoldItalicFont:Class;
+			
+			[Embed(source='/assets/fonts/SYMBOL.TTF', 
+				fontName='Symbol', 
+				mimeType='application/x-font')] 
+			private var symbolFont:Class;
+			
+			public static const canvasWidth:int = 1024;
+			public static const canvasHeight:int = 768;
+			
+			
+			public static const _toolBarHeight:Number = 105;
+			
+			private static var container_list:XML;
+			public static var image_library:ImageLibrary;
+			
+			public var imageClasses:Object;
+			public var imageContainers:Object;
+			public var imagePos:Object;
+			
+			private var _loadingPopup:Loading;
+			
+			private var htmlTextWatcher:ChangeWatcher = null;
+			private var linkTypeWatcher:ChangeWatcher = null;
+			private var arrowTypeWatcher:ChangeWatcher = null;
+			private var linkDashWatcher:ChangeWatcher = null;
+			private var linkGapWatcher:ChangeWatcher = null;
+			
+			private var _fileName:String = new String();
+			
+			[Embed(source="assets/simple_arrow_3d.swf")]
+			[Bindable]
+			public var simpleArrow:Class;
+			
+			private var printMenu:Menu = null;
+			private var relatedMenu:Menu = null;
+			
+			private var _diagramGroup:DiagramGroup = null;
+			
+			private var _currentLevel:int = 1;
+			
+			private var _entryURL:String = null;
+			
+			private var _playerMode:String = "DIAGRAM_PLAYER";
+			private var _browserHistoryCounter:int = -1;
+			private var _reportURL:String = null;
+			private var _destURL:String = null;
+			
+			protected function init() : void
+			{
+				CalloutShape.TEXT_MARGIN_EXTRA_RIGHT = 2;
+				drawToolboxBg();				
+				navigator.creationPolicy = ContainerCreationPolicy.ALL;
+
+//				FilterUtility.addEmbossFilter(diagramTitle);
+				FilterUtility.addDropShadowFilter(diagramTitle);
+
+				var prefix_length:int = "filename=".length;
+				var file_name:String = Application.application.parameters.fileName;
+				if (file_name.substr(0, prefix_length) == "filename=") 
+				{
+					file_name = file_name.substr(prefix_length, file_name.length - prefix_length);	
+				}
+//				file_name = "sugar.dgs";
+				if (file_name == "debug=true" || file_name == null || file_name == "fluid vol ov.xml") file_name = "fluid.dgs";
+				var file_name_ext:String = file_name.substr(file_name.length - 4, 4).toLowerCase();
+				if (file_name_ext == ".dgs")
+				{
+					_diagramGroup = new DiagramGroup();
+					_diagramGroup.load(this, file_name, onDiagramGroupReady);
+				} else
+				{
+					_diagramGroup = new DiagramGroup();
+					_diagramGroup.structureXML = new XML("<diagramGroups> <group id=\"1\" label=\"\">" +
+						"  <diagram id=\"1\" label=\"" + file_name + "\" file=\""+ file_name +"\"/>" 
+						+ " </group></diagramGroups>");
+					createTabs();
+				}
+				
+				ExternalInterface.addCallback("newFrameLoaded", newFrameLoaded);
+			}
+			
+			protected function onDiagramGroupReady(event:FileEvent):void
+			{
+				this.removeEventListener(FileEvent.FILE_READY, onDiagramGroupReady);
+				_diagramGroup.structureXML = new XML(event.data);
+				createTabs();
+//				Alert.show(group_xml.toString());
+			}
+			
+			protected function createTabs():void
+			{
+				var diagrams:XMLList = _diagramGroup.getGroup(_currentLevel).diagram;
+				var tab_count:int = diagrams.length();
+				for (var i:int=0; i < tab_count; i++) 
+				{
+					var tab_tmp:DiagramCanvasTab = new DiagramCanvasTab();
+					navigator.addChild(tab_tmp);
+					tab_tmp.percentWidth = 100;
+					tab_tmp.percentHeight = 100;
+				}
+				resizeBoards();
+				setTabLables();
+				setStartFileName(_diagramGroup.getDiagramFileName(_currentLevel, 1));
+			}
+			
+			protected function setTabLables():void
+			{
+				for (var i:int=0; i < navigator.getChildren().length; i++)
+				{
+					var tab_tmp:Object = navigator.getChildAt(i);
+					var diagram_tmp:XMLList = _diagramGroup.getDiagram(_currentLevel, i + 1); 
+					tab_tmp.label = diagram_tmp[0].@label;
+				}
+			}
+			
+			protected function setStartFileName(file_name:String):void
+			{
+				_fileName = file_name;
+				
+				
+				addEventListener(LibraryEvent.CONFIGURATION_READY, onConfigurationReady);
+				Configurations.load(this);
+				
+				_loadingPopup = new Loading();
+				PopUpManager.addPopUp(_loadingPopup, this, true);
+				PopUpManager.centerPopUp(_loadingPopup);
+				addEventListener("LayerSelectionChanged", onLayerSelectionChanged);
+			}
+			
+			private function drawToolboxBg():void
+			{
+				if (toolBar == null) return;
+				// Add gradient background
+				var type:String = GradientType.LINEAR;
+//				var colors:Array = [0x335393, 0x6888C8, 0x335393];
+//				var colors:Array = [0x335393, 0x6888C8, 0x133363];
+//				var colors:Array = [0x6888C8, 0x335393, 0x335393, 0x6888C8];
+				var colors:Array = [0xffffff, 0xd0d0d0, 0xd0d0d0, 0x666666];
+				var alphas:Array = [1, 1, 1, 1];
+				var ratios:Array = [0, 48, 208, 255];
+				var spreadMethod:String = SpreadMethod.PAD;
+				var interp:String = InterpolationMethod.LINEAR_RGB;
+				var focalPtRatio:Number = 0;
+				
+				var matrix:Matrix = new Matrix();
+				var boxWidth:Number = toolBar.width;
+				var boxHeight:Number = toolBar.height;
+				var boxRotation:Number = Math.PI/2; // 90�?
+				var tx:Number = 0;
+				var ty:Number = 0;
+				matrix.createGradientBox(boxWidth, boxHeight, boxRotation, tx, ty);
+				
+				toolBar.graphics.beginGradientFill(type, 
+					colors,
+					alphas,
+					ratios, 
+					matrix, 
+					spreadMethod, 
+					interp, 
+					focalPtRatio);
+				toolBar.graphics.drawRect(0,0,toolBar.width,toolBar.height);
+				toolBar.graphics.endFill();
+			}
+			
+			protected function onConfigurationReady(event:LibraryEvent):void
+			{
+				removeEventListener(LibraryEvent.CONFIGURATION_READY, onConfigurationReady);
+				// Link all types to the XML
+				LinkIcon.types = Configurations.settings.linkicon_list; 
+				Arrow.types = Configurations.settings.arrow_list;
+				ThreePointLink.types = Configurations.settings.link_list;			
+				Relationship.types = Configurations.settings.relationship_list;
+				
+				image_library =  new ImageLibrary(this);
+				this.addEventListener(LibraryEvent.IMAGE_LIBRARY_READY, onImageLibraryReady);
+			}
+			
+			protected function onImageLibraryReady(event:LibraryEvent):void {
+				var source:ObjectSource;
+				var ix_start:Number = 20;
+				var ix:Number = ix_start;
+				var iy:Number = 30;
+				var rw:Number = 60;
+				var rh:Number = 60;
+				var max_ix:Number = 2 * rw + ix - 1;
+				
+				PopUpManager.removePopUp(_loadingPopup);
+				_loadingPopup = null;
+				removeEventListener(LibraryEvent.IMAGE_LIBRARY_READY, onImageLibraryReady);
+
+				if (_fileName != null && _fileName.length > 0)
+				{
+					setTabFileName();
+				}
+				
+				addEventListener("OpenInnerDiagram", openInnerDiagram);
+				addEventListener("BackToLastDiagram", backToLastDiagram); 
+			}
+			
+			protected function setTabFileName():void
+			{
+				for (var i:int=0; i < navigator.getChildren().length; i++)
+				{
+					var tab_tmp:Object = navigator.getChildAt(i);
+					tab_tmp.fileName = _diagramGroup.getDiagramFileName(_currentLevel, i + 1);
+				}
+			}
+			
+			protected function openInnerDiagram(event:InnerDiagramEvent):void
+			{
+				_currentLevel ++;
+				var next_func:Function;
+				
+				var current_tab:Object = navigator.selectedChild;
+				var active_tab_num:int = navigator.selectedIndex;
+				
+				var group_id:int = _diagramGroup.getDiagramGroupID(event.fileName);
+				
+				current_tab.insideDiagram(event.objClicked, _diagramGroup.getDiagramFileName(group_id, active_tab_num + 1));
+
+				for (var i:int = 0; i < navigator.getChildren().length; i++)
+				{
+					if (i != active_tab_num)
+					{
+						var tab_tmp:Object = navigator.getChildAt(i);
+						tab_tmp.width = current_tab.width;
+						tab_tmp.height = current_tab.height;
+						tab_tmp.enabled = false;
+					}
+				}
+				
+				next_func = function():void {
+					for (var i:int = 0; i < navigator.getChildren().length; i++)
+					{
+						if (i != active_tab_num)
+						{
+							var tab_tmp:Object = navigator.getChildAt(i);
+							tab_tmp.insideDiagram(event.objClicked, _diagramGroup.getDiagramFileName(group_id, i + 1));
+							tab_tmp.enabled = true;
+						}
+					}
+				}
+
+				var play_timer:Timer = new Timer(3500, 1);
+				play_timer.addEventListener(TimerEvent.TIMER_COMPLETE, next_func);
+				play_timer.start();
+			}
+			
+			protected function backToLastDiagram(event:Event):void 
+			{
+				_currentLevel --;
+
+				for (var i:int=0; i < navigator.getChildren().length; i++)
+				{
+					var tab_tmp:Object = navigator.getChildAt(i);
+					tab_tmp.backToLastDiagram();
+				}
+			}
+			
+			public function toggleScreen():void
+			{
+				if (Application.application.stage.displayState == StageDisplayState.FULL_SCREEN) {
+					Application.application.stage.displayState = StageDisplayState.NORMAL;					
+				} else
+				{
+					Application.application.stage.displayState = StageDisplayState.FULL_SCREEN;
+				}
+			}
+
+			protected function cbShowCallouts_clickHandler(event:MouseEvent):void
+			{
+				navigator.selectedChild.dispatchEvent(new Event("showCalloutsChanged"));
+			}
+
+
+			protected function navigator_changeHandler(event:IndexChangedEvent):void
+			{
+				(navigator.selectedChild as Object).updateParentToolBox();
+			}
+
+
+			protected function cbShowLinks_clickHandler(event:MouseEvent):void
+			{
+				navigator.selectedChild.dispatchEvent(new Event("showProcessListChanged"));
+			}
+
+
+			protected function buttonBack_clickHandler(event:MouseEvent):void
+			{
+				Application.application.dispatchEvent(new Event("BackToLastDiagram"));
+			}
+
+			protected function buttonPrint_clickHandler(event:MouseEvent):void
+			{
+				printMenu = Menu.createMenu(null, printMenuData, false);
+				printMenu.labelField="@label";
+				printMenu.show(tool_box.x + buttonPrint.x - 60, buttonPrint.y + buttonPrint.height);
+				printMenu.addEventListener(MenuEvent.ITEM_CLICK, printMenuClicked);
+			}
+
+			protected function printMenuClicked(event:MenuEvent):void
+			{
+				printMenu.visible = false;
+				if (event.item.@label == "To PDF") {
+					(navigator.selectedChild as Object).print2PDF();	
+				} else {
+					(navigator.selectedChild as Object).print2Printer();
+				}
+			}
+
+			protected function application1_resizeHandler(event:ResizeEvent):void
+			{
+				drawToolboxBg();
+			}
+
+			protected function resizeBoards():void
+			{
+				for (var i:int=0; i < navigator.getChildren().length; i++)
+				{
+					var tab_tmp:Object = navigator.getChildAt(i);
+					tab_tmp.dispatchEvent(new ResizeEvent("resize"));
+				}
+				embedded_browser.width = width;
+				embedded_browser.height = height-52;
+			}
+			
+			public function linkHandler(event:TextEvent):Boolean
+			{
+				Alert.show(event.toString(), event.text);
+				return false;
+			}
+			
+			public function onLayerSelectionChanged(event:ValueChangedEvent):void
+			{
+				for (var i:int=0; i < navigator.getChildren().length; i++)
+				{
+					if (i != navigator.selectedIndex)
+					{
+						var tab_tmp:Object = navigator.getChildAt(i);
+						if (tab_tmp.hasOwnProperty("selectedLayer"))
+							tab_tmp.selectedLayer = event.newValue;
+					}
+				}
+			}
+			
+			public function setTitles():void
+			{
+				diagramTitle.text = _diagramGroup.getTitle();
+				diagramSubtitle.text = _diagramGroup.getGroupTitle(_currentLevel);
+				diagramSubtitle.alpha = 1;
+				WEBUtils.setPageTitle(diagramTitle.text);
+				WEBUtils.setPageDescription(_diagramGroup.getDescription());
+			}
+			
+			public function get currentGroupLabel():String
+			{
+				return _diagramGroup.getGroupTitle(_currentLevel);
+			}
+
+			public function get lastGroupLabel():String
+			{
+				return _diagramGroup.getGroupTitle(_currentLevel - 1);
+			}
+
+			protected function cbShowInfoMenu_clickHandler(event:Event):void
+			{
+				var selected_tab:DiagramCanvasTab = navigator.selectedChild as DiagramCanvasTab; 
+
+				relatedMenu = selected_tab.createRelatedMenu();
+				relatedMenu.show(tool_box.x + buttonShowInfoMenu.x, toolBar.y + tool_box.height);
+			}
+
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				if (embedded_browser.visible) 
+				{
+					exitFromEmbedded();
+				} 
+			}
+
+			public function switchToEmbedded(url:String, report_URL:String=null):void
+			{
+				_destURL = url;
+				_reportURL = report_URL;
+				
+				_playerMode = "EMBEDDED_BROWSER";
+				_browserHistoryCounter = 0;
+				inner_navigation_controls.visible = false;
+				inner_navigation_controls.includeInLayout = false;
+				ext_navi_controls.visible = true;
+				ext_navi_controls.includeInLayout = true;
+				tool_box.visible = false;;
+				tool_box.includeInLayout = false;
+				buttonBackEmbedded.visible = false;
+				
+				navigator.visible = false;
+				var up_left:Point = navigator.localToGlobal(new Point(0,0));
+				embedded_browser.move(up_left.x, up_left.y);
+				embedded_browser.width = navigator.width;
+				embedded_browser.height = navigator.height;
+				embedded_browser.source = "about:blank";
+				embedded_browser.visible = true;
+				navigator.visible = false;
+				navigator.includeInLayout = false;
+				buttonCloseEmbedded.label = "Back to " + diagramSubtitle.text;
+				if (_entryURL == null) _entryURL = url;
+			}
+			
+			public function exitFromEmbedded():void
+			{
+				_playerMode = "DIAGRAM_PLAYER";
+				inner_navigation_controls.visible = true;
+				inner_navigation_controls.includeInLayout = true;
+				ext_navi_controls.visible = false;
+				ext_navi_controls.includeInLayout = false;
+				tool_box.visible = true;;
+				tool_box.includeInLayout = true;
+				
+				embedded_browser.visible = false;
+				navigator.visible = true;
+				navigator.includeInLayout = true;
+			}
+
+			protected function button2_clickHandler(event:MouseEvent):void
+			{
+				if (_browserHistoryCounter == 2)
+				{
+					exitFromEmbedded();
+				} else
+				{
+					_browserHistoryCounter -= 2;
+					embedded_browser.back();
+				}
+			}
+			
+			protected function button3_clickHandler(event:MouseEvent):void
+			{
+				embedded_browser.forward();
+			}
+			
+			protected function buttonReport_clickHandler(event:MouseEvent):void
+			{
+				embedded_browser.source = _reportURL;
+			}
+			
+			public function newFrameLoaded():void
+			{
+				if (_playerMode == "EMBEDDED_BROWSER") 
+				{
+					_browserHistoryCounter ++;
+					switch (_browserHistoryCounter)
+					{
+						case 1:
+							embedded_browser.source = _destURL;
+							break;
+						case 2:
+							buttonBackEmbedded.visible = true;
+							buttonCloseEmbedded.visible = false;
+							buttonCloseEmbedded.includeInLayout = false;
+							if (_reportURL != null)
+							{
+								buttonPathwayReport.visible = true;
+							} else
+							{
+								buttonPathwayReport.visible = false;
+							}
+							break;
+						default:
+							buttonPathwayReport.visible = false;
+							buttonCloseEmbedded.visible = true;
+							buttonCloseEmbedded.includeInLayout = true;
+							var current_url:String = WEBUtils.getURL();
+							if (current_url != null && current_url == "about:blank") exitFromEmbedded();
+					}
+				}
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Style>
+		ToolTip{
+			font-family: arial;
+			fontSize: 12;
+			color: #000000;
+			background-color: #FFFFFF;
+			background-alpha: 0.85;
+			borderSkin: ClassReference("edu.mcw.hmgc.rgd.ui.controls.HTMLToolTips");
+			fontWeight: "normal";
+		}
+		
+		.errorTip {
+			fontWeight: "normal";
+		}
+		
+		TabNavigator {
+			selectedTabTextStyleName: "MySelectedTab";
+		}
+		
+		.MySelectedTab {
+			color: #007700;
+			textRollOverColor: #003388;
+			fontWeight: normal;
+		}
+		
+		Button {
+			fontWeight: normal;	
+		}
+	</mx:Style>	
+	<degrafa:Surface width="100%" top="0" bottom="0" alpha="0">
+		<degrafa:fills>
+			<paint:SolidFill    id="blueGradient" color="#00">
+			</paint:SolidFill>
+		</degrafa:fills>
+		
+		<degrafa:strokes>
+			<paint:SolidStroke id="grey" color="#555555" alpha="1" weight="2" pixelHinting="true"/>
+			<paint:SolidStroke id="thinGrey" color="#cccccc" alpha="0.5" weight="1" pixelHinting="true"/>
+		</degrafa:strokes>
+		
+		<degrafa:GeometryGroup id="background_group">
+			
+			<!-- Main box -->
+			<geometry:RegularRectangle   fill="{blueGradient}"
+										 x="0"
+										 y="5"
+										 stroke="{grey}"
+										 height="{height-1}"
+										 width="{width-1}"/>
+		</degrafa:GeometryGroup>		                                     
+		
+	</degrafa:Surface>
+	<geometry:RasterText id="rasterText" x="300" y="300" text="Physiological Pathway Portal"
+						 textColor="#FF00FF" size="64" horizontalCenter="0" fontFamily="Arial" fontWeight="bold">
+		<geometry:transform>
+			<transform:TransformGroup>
+				<transform:SkewTransform skewX="0"/>
+				<transform:RotateTransform angle="0" registrationPoint="center"/>
+			</transform:TransformGroup>
+		</geometry:transform>
+		<geometry:filters>
+			<mx:GlowFilter
+				color="#FF00FF"/>
+		</geometry:filters>
+	</geometry:RasterText>
+
+	<mx:VBox width="100%" verticalGap="0">
+		<mx:HBox width="100%" height="24" backgroundColor="#d0d0d0" >
+			<mx:Text id="diagramTitle" color="#000000" 
+					 width="100%"
+					 fontFamily="Arial" fontWeight="normal"
+					 fontSize="18"
+					 height="24"
+					 textAlign="center"
+					 />
+		</mx:HBox>
+		<mx:HBox id="toolBar" horizontalAlign="right" width="100%" 
+				 height="32" 
+				 borderColor="#FE0303" 
+				 cornerRadius="2" 
+				 verticalAlign="middle"
+				 resize="application1_resizeHandler(event)"
+				 horizontalScrollPolicy="off">
+			<mx:HBox width="100%" height="100%" verticalAlign="middle" id="inner_navigation_controls">
+				<mx:Button id="buttonBack" label="Back" visible="false" click="buttonBack_clickHandler(event)" 
+						   height="20%" fontFamily="Arial" fontSize="13" textDecoration="underline" textRollOverColor="#006600" color="#001C4E"
+						   disabledColor="#000000"/>
+				<mx:Image id="diagramTitleConnector" source="{simpleArrow}" visible="{buttonBack.visible}"
+						  includeInLayout="{buttonBack.visible}" height="90%" maintainAspectRatio="false"
+						  width="40"/>
+				<mx:Label id="diagramSubtitle" fontSize="14" color="#0421B5"  fontFamily="Arial" fontWeight="bold"/>
+			</mx:HBox>
+			<mx:HBox width="100%" height="100%" verticalAlign="middle" id="ext_navi_controls" visible="false" includeInLayout="false">
+				<mx:Button label="Prev" id="buttonBackEmbedded" click="button2_clickHandler(event)" icon="@Embed(source='assets/back_2.png')"
+						   height="90%" />
+				<mx:Button label="Button" id="buttonCloseEmbedded" click="button1_clickHandler(event)" visible="false" includeInLayout="false"
+						   height="90%" />
+<!--				<mx:Button click="button3_clickHandler(event)" icon="{IconLibrary.ARROW_RIGHT}"/>
+-->	
+				<mx:Button id="buttonPathwayReport" label="Go to the report page" click="buttonReport_clickHandler(event)" icon="{IconLibrary.REPORT}"
+						   visible="false" height="90%" />
+			</mx:HBox>
+				
+			<mx:HBox id="tool_box" verticalAlign="middle">
+				<mx:Button id="buttonShowInfoMenu" label="Related Information" click="cbShowInfoMenu_clickHandler(event)"
+							 height="90%" color="#001C4E"
+							 toolTip="Show information related to the current diagram" textRollOverColor="#033EFF"/>
+				<mx:CheckBox id="cbShowCallouts" label="Show Callouts" click="cbShowCallouts_clickHandler(event)"
+							 height="100%" color="#001C4E"
+							 toolTip="Show all callouts in the current diagram" textRollOverColor="#033EFF"/>
+				<mx:CheckBox id="cbShowLinks" label="Show Legend" click="cbShowLinks_clickHandler(event)" 
+							 height="{toolBar.height}" color="#001C4E" textRollOverColor="#033EFF" selected="true"
+							 toolTip="Show all processes included in the current diagram"/>
+				<mx:Button id="butScreen" label="Toggle Screen" click="toggleScreen()" color="#001C4E" fontWeight="normal"
+						   height="90%"  toolTip="Toggle from/to full-screen mode"/>
+				<mx:Button width="20" id="buttonPrint" icon="{IconLibrary.PRINTER}" 
+						   visible="true" 
+						   click="buttonPrint_clickHandler(event)"
+						   toolTip="Print the current diagram"/>
+			</mx:HBox>
+		</mx:HBox>
+	
+		<controls:Canvas>
+			
+		</controls:Canvas>
+	<containers:SuperTabNavigator id="navigator" height="{height-58}" width="100%" 
+								  closePolicy="close_never"
+								  popUpButtonPolicy="off" change="navigator_changeHandler(event)"
+								  resize="resizeBoards()" dragEnabled="false"
+								  backgroundColor="#888888"
+								  tabHeight="23" fontSize="14" borderStyle="none">
+<!--		<local:DiagramCanvasTab id="diagramTab" label="Physiology" width="100%" height="100%" fontSize="14"/>
+		<local:DiagramCanvasTab id="diseaseTab" label="Pathology" width="100%" height="100%"
+								layerSyncTabDown="{drugTab}"/>
+		<local:DiagramCanvasTab id="drugTab" label="Pharmacology" width="100%" height="100%"
+								layerSyncTabUp="{diseaseTab}"/>
+-->
+		<!--		<mx:Canvas label="Phenotype" width="100%" height="100%">
+		<mx:Label text="test"/>
+		</mx:Canvas>	
+		-->		
+	</containers:SuperTabNavigator>
+	</mx:VBox>
+	
+<!--	<mx:Button x="30" y="1" id="buttonRedraw" label="Back" visible="true" alpha=".5"  click="buttonRedraw_clickHandler(event)"/>
+-->
+	
+	<mx:XML format="e4x" id="printMenuData">
+		<root>
+			<menuitem label="To PDF" click="print2PDF()"/>
+			<menuitem label="To Printer" click="print2Printer()"/>
+		</root>
+	</mx:XML>
+
+	<mx:Image id="overview_image" visible="false"/>
+	<controls:IFrame id="embedded_browser" visible="false"/>
+</mx:Application>

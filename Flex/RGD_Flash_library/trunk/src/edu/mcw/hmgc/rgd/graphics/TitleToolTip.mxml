@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VBox xmlns:mx="http://www.adobe.com/2006/mxml" width="162" height="24" 
+		 horizontalAlign="center"
+		 horizontalScrollPolicy="off"
+		 verticalScrollPolicy="off"
+		  cornerRadius="5">
+	<mx:Label id="titleText" width="100%" text="" fontSize="14" color="white" textAlign="center"/>
+	
+</mx:VBox>

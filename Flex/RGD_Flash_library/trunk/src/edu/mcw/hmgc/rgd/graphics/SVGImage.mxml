@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<degrafa:GeometryGroup xmlns:mx="http://www.adobe.com/2006/mxml" 
+			 xmlns:degrafa="com.degrafa.*"
+			 xmlns:rgd="edu.mcw.hmgc.rgd.graphics.*">
+ 
+	<mx:Script>
+		<![CDATA[
+			import com.degrafa.GeometryComposition;
+			import com.degrafa.IGeometry;
+			import com.degrafa.core.IGraphicsFill;
+			import com.degrafa.core.IGraphicsStroke;
+			import com.degrafa.core.collections.GeometryCollection;
+			import com.degrafa.geometry.Geometry;
+			import com.degrafa.geometry.Path;
+			import com.degrafa.geometry.RasterText;
+			import com.degrafa.paint.DashedStroke;
+			import com.degrafa.paint.LinearGradientFill;
+			import com.degrafa.paint.RadialGradientFill;
+			import com.degrafa.paint.SolidFill;
+			import com.degrafa.paint.SolidStroke;
+			import com.degrafa.transform.MatrixTransform;
+			import com.roguedevelopment.objecthandles.ObjectChangedEvent;
+			
+			import edu.mcw.hmgc.rgd.utils.SVGParser;
+			import edu.mcw.hmgc.rgd.utils.SVGParser1;
+			
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			
+			[Bindable] private var _pathFill:com.degrafa.core.IGraphicsFill;
+			[Bindable] private var _pathFillColor:int;
+			[Bindable] private var _pathStroke:com.degrafa.core.IGraphicsStroke;
+			[Bindable] private var _pathStrokeColor:int;
+			[Bindable] private var _pathStrokeWeight:int = 2;
+			[Bindable] private var _pathStrokeGapOnLen:int = 0;
+			[Bindable] private var _pathStrokeGapOffLen:int = 0;
+			private var _pathStrokeWeightActual:int = 2;
+			[Bindable] private var _pathWidth:Number;		
+			[Bindable] private var _pathHeight:Number;
+			[Bindable] private var _maintainAspectRatio:Boolean = true;
+			
+			public var max_width:Number = 0;
+			public var max_height:Number = 0;
+			public var max_right:Number = 0;
+			public var max_bottom:Number = 0;
+			public var min_left:Number = 99999999999;
+			public var min_top:Number = 99999999999;
+			
+			
+			private var _originalWidth:Number;
+			private var _originalHeight:Number;
+			
+			private var svgResized:Boolean = false;
+			
+			private var _xmlData:XML;
+			
+			public function set xmlData(xml_data:XML):void
+			{
+				if (xml_data == null) return;
+				var svgparser:edu.mcw.hmgc.rgd.utils.SVGParser1 = new SVGParser1();
+				svgparser.parse(new XML(xml_data));
+				collectElements(svgparser);
+				resizeAll();
+			}
+			
+			public function set parser(svgparser:SVGParser1):void
+			{
+				collectElements(svgparser);
+				resizeAll();
+			}
+			
+
+			private function initImage():void
+			{
+				resizeAll();
+			} 
+			
+			private function rescale():void {
+				resizeAll();
+//				scaleX = width / _originalWidth;
+//				scaleY = height / _originalHeight;
+			}
+			
+			public function changeStroke():void {
+//				if (_pathStroke == null) return;
+				for each (var path1:Geometry in geometry) {
+					path1.stroke = _pathStroke;
+				}
+			}
+			
+			public function changeFill():void {
+				if (_pathFill == null && _pathFillColor != 1) return;
+				for each (var path1:Geometry in geometry) {
+					path1.fill = _pathFill;
+				}
+			}
+			
+			public function set svgFillColor(value:int):void {
+				_pathFillColor = value;
+				if (value == 1) 
+				{ // No fill if fill color is 1
+					svgFill = null;	
+				} else
+				{
+					svgFill = new SolidFill(_pathFillColor);
+				}
+			}
+			
+			public function get svgFillColor():int {
+				return _pathFillColor;
+			}
+			
+			private function generateStroke1():SolidStroke 
+			{
+				if (_pathStrokeColor == 1 || _pathStrokeWeight == 0) return null;
+				var stroke_tmp:SolidStroke = new SolidStroke(_pathStrokeColor);
+				if (_pathStrokeWeightActual >= 0) stroke_tmp.weight = _pathStrokeWeightActual;
+				return stroke_tmp;
+			}
+			
+			private function generateStroke():com.degrafa.core.IGraphicsStroke 
+			{
+				if (_pathStrokeColor == 1 || _pathStrokeWeight == 0) return null;
+				if (_pathStrokeGapOffLen > 0 && _pathStrokeGapOnLen > 0) {
+					var stroke_tmp:DashedStroke = new DashedStroke(_pathStrokeColor);
+					stroke_tmp.onLength = _pathStrokeGapOnLen;
+					stroke_tmp.offLength = _pathStrokeGapOffLen;
+					if (_pathStrokeWeightActual >= 0) stroke_tmp.weight = _pathStrokeWeightActual;
+					return stroke_tmp;
+				} else {
+					var stroke_tmp1:SolidStroke = new SolidStroke(_pathStrokeColor);
+					if (_pathStrokeWeightActual >= 0) stroke_tmp1.weight = _pathStrokeWeightActual;
+					return stroke_tmp1;
+				}
+			}
+			
+			public function set svgStrokeColor(value:int):void {
+				_pathStrokeColor = value;
+				svgStroke = generateStroke();
+			}
+			public function get svgStrokeColor():int {
+				return _pathStrokeColor;
+			}
+			
+			public function set svgStrokeWeight(value:int):void {
+				_pathStrokeWeight = value;
+				_pathStrokeWeightActual = _pathStrokeWeight / Math.max(scaleX, scaleY);
+				if (_pathStrokeWeightActual == 0) _pathStrokeWeightActual = _pathStrokeWeight;
+				svgStroke = generateStroke();
+			}
+			public function get svgStrokeWeight():int {
+				return _pathStrokeWeight;
+			}
+			
+			public function set svgStrokeGapOnLen(value:int):void {
+				_pathStrokeGapOnLen = value;
+				svgStroke = generateStroke();
+			}
+			public function get svgStrokeGapOnLen():int {
+				return _pathStrokeGapOnLen;
+			}
+			
+			public function set svgStrokeGapOffLen(value:int):void {
+				_pathStrokeGapOffLen = value;
+				svgStroke = generateStroke();
+			}
+			public function get svgStrokeGapOffLen():int {
+				return _pathStrokeGapOffLen;
+			}
+
+			public function set svgStroke(value:com.degrafa.core.IGraphicsStroke):void {
+				_pathStroke = value;
+				changeStroke();
+			}
+			public function get svgStroke():com.degrafa.core.IGraphicsStroke {
+				return _pathStroke;
+			}
+			
+			public function set svgFill(value:com.degrafa.core.IGraphicsFill):void {
+				_pathFill = value;
+				changeFill();
+			}
+			public function get svgFill():com.degrafa.core.IGraphicsFill {
+				return _pathFill;
+			}
+			
+			public function set svgWidth(value:Number):void 
+			{
+				_pathWidth = value;
+				width = value;
+				rescale();
+			}
+			
+			public function set svgHeight(value:Number):void 
+			{
+				_pathHeight = value;
+				height = value;
+				rescale();
+			}
+			
+			public function resizeAll():void {
+				
+				if (height == 0 || width == 0 || max_width == 0
+				|| max_height == 0) {return;};
+				
+//				var max_width:Number = 0;
+//				var max_height:Number = 0;
+//				var min_left:Number = 99999999999;
+//				var min_top:Number = 99999999999;
+//				var max_right:Number = 0;
+//				var max_bottom:Number = 0;
+					
+				// Gather ranges
+//				if (max_width == 0)
+//				{
+//					for each (var lp:Geometry in geometryCollection.items ) {
+//						if (lp is Path)
+//						{
+//							if (max_right < lp.bounds.right) max_right = lp.bounds.right;
+//							if (max_bottom < lp.bounds.bottom) max_bottom = lp.bounds.bottom;
+//							if (min_left > lp.bounds.left) min_left = lp.bounds.left;
+//							if (min_top > lp.bounds.top) min_top = lp.bounds.top;
+//						}
+//					}
+//					
+//					max_width = max_right - min_left;
+//					max_height = max_bottom - min_top;
+//				}
+				
+				// Keep aspect ratio
+				var scale_x:Number = width / max_width;
+				var scale_y:Number = height / max_height; 
+
+				if (_maintainAspectRatio)
+				{
+					if (scale_x < scale_y)
+					{
+						// Fit for width
+						scale_y = scale_x;
+						_pathHeight = _pathWidth * max_height / max_width;
+						
+					} else
+					{
+						// Fit for height
+						scale_x = scale_y;
+						_pathWidth = _pathHeight * max_width / max_height;
+						
+					}
+				}
+				width = _pathWidth;
+				height = _pathHeight;
+				_originalWidth = width;
+				_originalHeight = height;
+				///////////////
+				
+				// Calculate global transform parameters
+				var offset_x:Number = min_left;
+				var offset_y:Number = min_top;
+				var scale_weight:Number = Math..sqrt(scale_x * scale_y);
+				
+				for each (var myPath:Geometry in geometryCollection.items) {
+					
+					var tm:MatrixTransform = new MatrixTransform();
+					tm.a=scale_x;
+					tm.b = 0;
+					tm.c = 0;
+					tm.d=scale_y;
+					
+					// Apply global offset along with local offset of each path
+					tm.tx=-offset_x - (myPath.bounds.x - min_left)* (1-scale_x);
+					tm.ty=-offset_y - (myPath.bounds.y - min_top)* (1- scale_y);
+					tm.registrationPoint = "topLeft";
+					
+					myPath.transform = tm;
+//					myPath.stroke.weight = myPath.stroke.weight * scale_weight;
+					
+					if (myPath.stroke != null) myPath.stroke.weight = svgStrokeWeight; 
+				}
+//				rescale();
+				svgResized = true;
+//				this.draw(null, null);
+			}
+			
+			public function set maintainAspectRatio(value:Boolean):void
+			{
+				_maintainAspectRatio = value;
+			}
+			
+			public function get maintainAspectRatio():Boolean
+			{
+				return _maintainAspectRatio;
+			}
+			
+			protected function collectElements(svgParser:SVGParser1):void
+			{
+				max_width = svgParser.max_width;
+				max_height = svgParser.max_height;
+				min_left = svgParser.min_left;
+				min_top = svgParser.min_top;
+				max_right = svgParser.max_right;
+				max_bottom = svgParser.max_bottom;
+				for each (var geo:GeometryComposition in svgParser.geometries)
+				{
+					addChildren(geo);
+				}
+			}
+			
+			protected function addChildren(gc:GeometryComposition):void
+			{
+				for each (var geo:Geometry in gc.geometryCollection.items)
+				{
+					if (geo is GeometryComposition)
+					{
+						addChildren(geo as GeometryComposition);
+					} else {
+						
+						if (geo is Path) 
+						{
+							var old_path:Path = geo as Path;
+							var new_path:Path = new Path();
+							new_path.data = old_path.data;
+							new_path.stroke = old_path.stroke;
+							new_path.fill = old_path.fill;
+							geometryCollection.addItem(new_path);
+						}
+						if (geo is RasterText) 
+						{
+							geometryCollection.addItem(geo);
+						}
+					}
+				}
+				return;
+				
+			}
+			
+			public function removeAllChildren():void
+			{
+				for each (var geo:Geometry in geometryCollection.items)
+				{
+					if (geo is Path)
+					{
+						var path:Path = geo as Path;
+						path.stroke = null;
+						path.fill = null;
+						path.data = null;
+						geometryCollection.removeItem(path);
+					}
+					if (geo is RasterText)
+					{
+						geometryCollection.removeItem(geo);
+					}
+				}
+			}
+		]]>
+	</mx:Script>
+	
+</degrafa:GeometryGroup>
+

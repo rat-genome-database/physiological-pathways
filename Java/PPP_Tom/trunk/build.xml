@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="trunk" default="all">
+  
+  
+  <property file="build.properties"/>
+  <!-- Uncomment the following property if no tests compilation is needed -->
+  <!-- 
+  <property name="skip.tests" value="true"/>
+   -->
+  
+  <!-- Compiler options -->
+  
+  <property name="compiler.debug" value="on"/>
+  <property name="compiler.generate.no.warnings" value="off"/>
+  <property name="compiler.args" value=""/>
+  <property name="compiler.max.memory" value="128m"/>
+  <patternset id="ignored.files">
+    <exclude name="**/CVS/**"/>
+    <exclude name="**/SCCS/**"/>
+    <exclude name="**/RCS/**"/>
+    <exclude name="**/rcs/**"/>
+    <exclude name="**/.DS_Store/**"/>
+    <exclude name="**/.svn/**"/>
+    <exclude name="**/.pyc/**"/>
+    <exclude name="**/.pyo/**"/>
+    <exclude name="**/*.pyc/**"/>
+    <exclude name="**/*.pyo/**"/>
+    <exclude name="**/.git/**"/>
+    <exclude name="**/*.hprof/**"/>
+    <exclude name="**/_svn/**"/>
+    <exclude name="**/.sbas/**"/>
+    <exclude name="**/.IJI.*/**"/>
+    <exclude name="**/vssver.scc/**"/>
+    <exclude name="**/vssver2.scc/**"/>
+    <exclude name="**/.hg/**"/>
+    <exclude name="**/*.lib/**"/>
+    <exclude name="**/*~/**"/>
+    <exclude name="**/__pycache__/**"/>
+    <exclude name="**/.bundle/**"/>
+  </patternset>
+  <patternset id="library.patterns">
+    <include name="*.war"/>
+    <include name="*.ear"/>
+    <include name="*.zip"/>
+    <include name="*.swc"/>
+    <include name="*.egg"/>
+    <include name="*.jar"/>
+  </patternset>
+  <patternset id="compiler.resources">
+    <include name="**/?*.properties"/>
+    <include name="**/?*.xml"/>
+    <include name="**/?*.gif"/>
+    <include name="**/?*.png"/>
+    <include name="**/?*.jpeg"/>
+    <include name="**/?*.jpg"/>
+    <include name="**/?*.html"/>
+    <include name="**/?*.dtd"/>
+    <include name="**/?*.tld"/>
+    <include name="**/?*.ftl"/>
+  </patternset>
+  
+  
+  <!-- Project Libraries -->
+  
+  <path id="library.apache_axis.classpath">
+    <pathelement location="${basedir}/lib/FastInfoset.jar"/>
+    <pathelement location="${basedir}/lib/OBOEngine.0.5.jar"/>
+    <pathelement location="${basedir}/lib/acegi-security-1.0.7.jar"/>
+    <pathelement location="${basedir}/lib/acegi-security-cas-1.0.7.jar"/>
+    <pathelement location="${basedir}/lib/activation.jar"/>
+    <pathelement location="${basedir}/lib/axis.jar"/>
+    <pathelement location="${basedir}/lib/backport-util-concurrent.jar"/>
+    <pathelement location="${basedir}/lib/bbop.jar"/>
+    <pathelement location="${basedir}/lib/cfgatewayadapter.jar"/>
+    <pathelement location="${basedir}/lib/classes12.jar"/>
+    <pathelement location="${basedir}/lib/commons-cli-1.1.jar"/>
+    <pathelement location="${basedir}/lib/commons-codec-1.3.jar"/>
+    <pathelement location="${basedir}/lib/commons-collections-3.0.jar"/>
+    <pathelement location="${basedir}/lib/commons-dbcp.jar"/>
+    <pathelement location="${basedir}/lib/commons-discovery-0.2.jar"/>
+    <pathelement location="${basedir}/lib/commons-httpclient-3.0.1.jar"/>
+    <pathelement location="${basedir}/lib/commons-logging-1.0.4.jar"/>
+    <pathelement location="${basedir}/lib/commons-logging.jar"/>
+    <pathelement location="${basedir}/lib/commons-pool.jar"/>
+    <pathelement location="${basedir}/lib/concurrent.jar"/>
+    <pathelement location="${basedir}/lib/filterbuilder.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-common.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-core.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-opt.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-proxy.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-remoting.jar"/>
+    <pathelement location="${basedir}/lib/htmllexer.jar"/>
+    <pathelement location="${basedir}/lib/htmlparser.jar"/>
+    <pathelement location="${basedir}/lib/http.jar"/>
+    <pathelement location="${basedir}/lib/jaxb-api.jar"/>
+    <pathelement location="${basedir}/lib/jaxb-impl.jar"/>
+    <pathelement location="${basedir}/lib/jaxb-xjc.jar"/>
+    <pathelement location="${basedir}/lib/jaxrpc.jar"/>
+    <pathelement location="${basedir}/lib/jaxws-api.jar"/>
+    <pathelement location="${basedir}/lib/jaxws-rt.jar"/>
+    <pathelement location="${basedir}/lib/jaxws-tools.jar"/>
+    <pathelement location="${basedir}/lib/jdom.jar"/>
+    <pathelement location="${basedir}/lib/jsp-api.jar"/>
+    <pathelement location="${basedir}/lib/jsr173_api.jar"/>
+    <pathelement location="${basedir}/lib/jsr181-api.jar"/>
+    <pathelement location="${basedir}/lib/jsr250-api.jar"/>
+    <pathelement location="${basedir}/lib/jstl-1.0.jar"/>
+    <pathelement location="${basedir}/lib/jstl.jar"/>
+    <pathelement location="${basedir}/lib/log4j-1.2.8.jar"/>
+    <pathelement location="${basedir}/lib/obo.jar"/>
+    <pathelement location="${basedir}/lib/ojdbc14.jar"/>
+    <pathelement location="${basedir}/lib/resolver.jar"/>
+    <pathelement location="${basedir}/lib/rgdcore_1.1.3.jar"/>
+    <pathelement location="${basedir}/lib/saaj-api.jar"/>
+    <pathelement location="${basedir}/lib/saaj-impl.jar"/>
+    <pathelement location="${basedir}/lib/saaj.jar"/>
+    <pathelement location="${basedir}/lib/sax2.jar"/>
+    <pathelement location="${basedir}/lib/servlet-api.jar"/>
+    <pathelement location="${basedir}/lib/sjsxp.jar"/>
+    <pathelement location="${basedir}/lib/spring-aop.jar"/>
+    <pathelement location="${basedir}/lib/spring-beans.jar"/>
+    <pathelement location="${basedir}/lib/spring-context-support.jar"/>
+    <pathelement location="${basedir}/lib/spring-context.jar"/>
+    <pathelement location="${basedir}/lib/spring-core.jar"/>
+    <pathelement location="${basedir}/lib/spring-jdbc.jar"/>
+    <pathelement location="${basedir}/lib/spring-jms.jar"/>
+    <pathelement location="${basedir}/lib/spring-orm.jar"/>
+    <pathelement location="${basedir}/lib/spring-test.jar"/>
+    <pathelement location="${basedir}/lib/spring-tx.jar"/>
+    <pathelement location="${basedir}/lib/spring-web.jar"/>
+    <pathelement location="${basedir}/lib/spring-webmvc-portlet.jar"/>
+    <pathelement location="${basedir}/lib/spring-webmvc-struts.jar"/>
+    <pathelement location="${basedir}/lib/spring-webmvc.jar"/>
+    <pathelement location="${basedir}/lib/spring.jar"/>
+    <pathelement location="${basedir}/lib/standard.jar"/>
+    <pathelement location="${basedir}/lib/stax-ex.jar"/>
+    <pathelement location="${basedir}/lib/streambuffer.jar"/>
+    <pathelement location="${basedir}/lib/thumbelina.jar"/>
+    <pathelement location="${basedir}/lib/wsdl4j-1.5.1.jar"/>
+    <pathelement location="${basedir}/lib/xalan.jar"/>
+    <pathelement location="${basedir}/lib/xerces.jar"/>
+    <pathelement location="${basedir}/lib/xml-apis-ext.jar"/>
+    <pathelement location="${basedir}/lib/xml-apis.jar"/>
+  </path>
+  
+  <path id="library.apache_axis_cleaned.classpath">
+    <pathelement location="${basedir}/lib/FastInfoset.jar"/>
+    <pathelement location="${basedir}/lib/OBOEngine.0.5.jar"/>
+    <pathelement location="${basedir}/lib/acegi-security-1.0.7.jar"/>
+    <pathelement location="${basedir}/lib/acegi-security-cas-1.0.7.jar"/>
+    <pathelement location="${basedir}/lib/activation.jar"/>
+    <pathelement location="${basedir}/lib/axis.jar"/>
+    <pathelement location="${basedir}/lib/backport-util-concurrent.jar"/>
+    <pathelement location="${basedir}/lib/bbop.jar"/>
+    <pathelement location="${basedir}/lib/cfgatewayadapter.jar"/>
+    <pathelement location="${basedir}/lib/classes12.jar"/>
+    <pathelement location="${basedir}/lib/commons-cli-1.1.jar"/>
+    <pathelement location="${basedir}/lib/commons-codec-1.3.jar"/>
+    <pathelement location="${basedir}/lib/commons-collections-3.0.jar"/>
+    <pathelement location="${basedir}/lib/commons-dbcp.jar"/>
+    <pathelement location="${basedir}/lib/commons-discovery-0.2.jar"/>
+    <pathelement location="${basedir}/lib/commons-httpclient-3.0.1.jar"/>
+    <pathelement location="${basedir}/lib/commons-logging-1.0.4.jar"/>
+    <pathelement location="${basedir}/lib/commons-logging.jar"/>
+    <pathelement location="${basedir}/lib/commons-pool.jar"/>
+    <pathelement location="${basedir}/lib/concurrent.jar"/>
+    <pathelement location="${basedir}/lib/filterbuilder.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-common.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-core.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-opt.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-proxy.jar"/>
+    <pathelement location="${basedir}/lib/flex-messaging-remoting.jar"/>
+    <pathelement location="${basedir}/lib/htmllexer.jar"/>
+    <pathelement location="${basedir}/lib/htmlparser.jar"/>
+    <pathelement location="${basedir}/lib/http.jar"/>
+    <pathelement location="${basedir}/lib/jaxb-api.jar"/>
+    <pathelement location="${basedir}/lib/jaxb-impl.jar"/>
+    <pathelement location="${basedir}/lib/jaxb-xjc.jar"/>
+    <pathelement location="${basedir}/lib/jaxrpc.jar"/>
+    <pathelement location="${basedir}/lib/jaxws-api.jar"/>
+    <pathelement location="${basedir}/lib/jaxws-rt.jar"/>
+    <pathelement location="${basedir}/lib/jaxws-tools.jar"/>
+    <pathelement location="${basedir}/lib/jdom.jar"/>
+    <pathelement location="${basedir}/lib/jsr173_api.jar"/>
+    <pathelement location="${basedir}/lib/jsr181-api.jar"/>
+    <pathelement location="${basedir}/lib/jsr250-api.jar"/>
+    <pathelement location="${basedir}/lib/jstl-1.0.jar"/>
+    <pathelement location="${basedir}/lib/jstl.jar"/>
+    <pathelement location="${basedir}/lib/log4j-1.2.8.jar"/>
+    <pathelement location="${basedir}/lib/obo.jar"/>
+    <pathelement location="${basedir}/lib/ojdbc14.jar"/>
+    <pathelement location="${basedir}/lib/resolver.jar"/>
+    <pathelement location="${basedir}/lib/rgdcore_1.1.3.jar"/>
+    <pathelement location="${basedir}/lib/saaj-api.jar"/>
+    <pathelement location="${basedir}/lib/saaj-impl.jar"/>
+    <pathelement location="${basedir}/lib/saaj.jar"/>
+    <pathelement location="${basedir}/lib/sax2.jar"/>
+    <pathelement location="${basedir}/lib/sjsxp.jar"/>
+    <pathelement location="${basedir}/lib/spring-aop.jar"/>
+    <pathelement location="${basedir}/lib/spring-beans.jar"/>
+    <pathelement location="${basedir}/lib/spring-context-support.jar"/>
+    <pathelement location="${basedir}/lib/spring-context.jar"/>
+    <pathelement location="${basedir}/lib/spring-core.jar"/>
+    <pathelement location="${basedir}/lib/spring-jdbc.jar"/>
+    <pathelement location="${basedir}/lib/spring-jms.jar"/>
+    <pathelement location="${basedir}/lib/spring-orm.jar"/>
+    <pathelement location="${basedir}/lib/spring-test.jar"/>
+    <pathelement location="${basedir}/lib/spring-tx.jar"/>
+    <pathelement location="${basedir}/lib/spring-web.jar"/>
+    <pathelement location="${basedir}/lib/spring-webmvc-portlet.jar"/>
+    <pathelement location="${basedir}/lib/spring-webmvc-struts.jar"/>
+    <pathelement location="${basedir}/lib/spring-webmvc.jar"/>
+    <pathelement location="${basedir}/lib/spring.jar"/>
+    <pathelement location="${basedir}/lib/standard.jar"/>
+    <pathelement location="${basedir}/lib/stax-ex.jar"/>
+    <pathelement location="${basedir}/lib/streambuffer.jar"/>
+    <pathelement location="${basedir}/lib/thumbelina.jar"/>
+    <pathelement location="${basedir}/lib/wsdl4j-1.5.1.jar"/>
+    <pathelement location="${basedir}/lib/xalan.jar"/>
+    <pathelement location="${basedir}/lib/xerces.jar"/>
+    <pathelement location="${basedir}/lib/xml-apis-ext.jar"/>
+    <pathelement location="${basedir}/lib/xml-apis.jar"/>
+  </path>
+  
+  
+  <!-- Global Libraries -->
+  
+  <path id="library.blazeds.classpath">
+    <fileset dir="${blazeds.lib.dir}">
+      <patternset refid="library.patterns"/>
+    </fileset>
+  </path>
+  
+  
+  <!-- Application Server Libraries -->
+  
+  <!-- Modules -->
+  
+  
+  <!-- Module PPP_Tom -->
+  
+  <dirname property="module.ppp_tom.basedir" file="${ant.file}"/>
+  
+  
+  
+  <property name="compiler.args.ppp_tom" value="${compiler.args}"/>
+  
+  <property name="ppp_tom.output.dir" value="${module.ppp_tom.basedir}/out/production/PPP_Tom"/>
+  <property name="ppp_tom.testoutput.dir" value="${module.ppp_tom.basedir}/out/test/PPP_Tom"/>
+  
+  <path id="ppp_tom.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="ppp_tom.module.production.classpath">
+    <path refid="library.apache_axis.classpath"/>
+    <path refid="library.apache_axis_cleaned.classpath"/>
+    <path refid="library.blazeds.classpath"/>
+  </path>
+  
+  <path id="ppp_tom.runtime.production.module.classpath">
+    <pathelement location="${ppp_tom.output.dir}"/>
+    <path refid="library.apache_axis.classpath"/>
+    <path refid="library.apache_axis_cleaned.classpath"/>
+    <path refid="library.blazeds.classpath"/>
+  </path>
+  
+  <path id="ppp_tom.module.classpath">
+    <pathelement location="${ppp_tom.output.dir}"/>
+    <path refid="library.apache_axis.classpath"/>
+    <path refid="library.apache_axis_cleaned.classpath"/>
+    <path refid="library.blazeds.classpath"/>
+  </path>
+  
+  <path id="ppp_tom.runtime.module.classpath">
+    <pathelement location="${ppp_tom.testoutput.dir}"/>
+    <pathelement location="${ppp_tom.output.dir}"/>
+    <path refid="library.apache_axis.classpath"/>
+    <path refid="library.apache_axis_cleaned.classpath"/>
+    <path refid="library.blazeds.classpath"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.ppp_tom">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.ppp_tom">
+    <patternset refid="excluded.from.module.ppp_tom"/>
+  </patternset>
+  
+  <path id="ppp_tom.module.sourcepath">
+    <dirset dir="${module.ppp_tom.basedir}">
+      <include name="src"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.ppp_tom" depends="compile.module.ppp_tom.production,compile.module.ppp_tom.tests" description="Compile module PPP_Tom"/>
+  
+  <target name="compile.module.ppp_tom.production" description="Compile module PPP_Tom; production classes">
+    <mkdir dir="${ppp_tom.output.dir}"/>
+    <javac destdir="${ppp_tom.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true">
+      <compilerarg line="${compiler.args.ppp_tom}"/>
+      <bootclasspath refid="ppp_tom.module.bootclasspath"/>
+      <classpath refid="ppp_tom.module.production.classpath"/>
+      <src refid="ppp_tom.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.ppp_tom"/>
+    </javac>
+    
+    <copy todir="${ppp_tom.output.dir}">
+      <fileset dir="${module.ppp_tom.basedir}/src">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.ppp_tom.tests" depends="compile.module.ppp_tom.production" description="compile module PPP_Tom; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.ppp_tom" description="cleanup module">
+    <delete dir="${ppp_tom.output.dir}"/>
+    <delete dir="${ppp_tom.testoutput.dir}"/>
+  </target>
+  
+  <target name="init" description="Build initialization">
+    <!-- Perform any build initialization in this target -->
+  </target>
+  
+  <target name="clean" depends="clean.module.ppp_tom" description="cleanup all"/>
+  
+  <target name="build.modules" depends="init, clean, compile.module.ppp_tom" description="build all modules"/>
+  
+  <target name="init.artifacts">
+    <property name="artifacts.temp.dir" value="${basedir}/__artifacts_temp"/>
+    <property name="artifact.output.ppp_tom:war" value="${basedir}/out/artifacts/PPP_Tom_war"/>
+    <mkdir dir="${artifacts.temp.dir}"/>
+    <property name="temp.jar.path.PPP_Tom.war" value="${artifacts.temp.dir}/PPP_Tom.war"/>
+  </target>
+  
+   <target name="artifact.ppp_tom:war" depends="init.artifacts, compile.module.ppp_tom" description="Build &apos;PPP_Tom:war&apos; artifact">
+    <property name="artifact.temp.output.ppp_tom:war" value="${artifacts.temp.dir}/PPP_Tom_war"/>
+    <mkdir dir="${artifact.temp.output.ppp_tom:war}"/>
+    <zip destfile="${temp.jar.path.PPP_Tom.war}">
+      <zipfileset dir="${ppp_tom.output.dir}" prefix="WEB-INF/classes"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/backport-util-concurrent.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/cfgatewayadapter.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/commons-codec-1.3.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/commons-httpclient-3.0.1.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/commons-logging.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/concurrent.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/flex-messaging-common.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/flex-messaging-core.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/flex-messaging-opt.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/flex-messaging-proxy.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/flex-messaging-remoting.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/${blazeds.lib.dir}/xalan.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/ojdbc14.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-jdbc.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-core.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-context.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-context-support.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-beans.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-aop.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-webmvc.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-webmvc-struts.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-webmvc-portlet.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-web.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-tx.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-test.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-orm.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring-jms.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/rgdcore_1.1.3.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/flex-messaging-common.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/FastInfoset.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/flex-messaging-opt.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/flex-messaging-core.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-httpclient-3.0.1.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-codec-1.3.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/concurrent.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-logging.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/log4j-1.2.8.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jaxb-xjc.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jaxb-impl.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jaxws-rt.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jaxrpc.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jaxws-api.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/wsdl4j-1.5.1.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/flex-messaging-remoting.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/flex-messaging-proxy.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/saaj.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jaxb-api.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/http.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/xml-apis.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/spring.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/resolver.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/saaj-api.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/saaj-impl.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/sjsxp.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jaxws-tools.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jsr173_api.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jsr181-api.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jsr250-api.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/obo.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/OBOEngine.0.5.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/sax2.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/stax-ex.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/standard.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/thumbelina.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/streambuffer.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/xerces.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/xalan.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/xml-apis-ext.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/htmlparser.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/htmllexer.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/filterbuilder.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-pool.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jstl.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jstl-1.0.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/jdom.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/bbop.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/acegi-security-cas-1.0.7.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/acegi-security-1.0.7.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-dbcp.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-collections-3.0.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-cli-1.1.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/classes12.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/axis.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-discovery-0.2.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/commons-logging-1.0.4.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/backport-util-concurrent.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/cfgatewayadapter.jar" prefix="WEB-INF/lib"/>
+      <zipfileset file="${basedir}/lib/activation.jar" prefix="WEB-INF/lib"/>
+      <zipfileset dir="${basedir}/web"/>
+      <zipfileset file="${basedir}/web/WEB-INF/web.xml" prefix="WEB-INF"/>
+    </zip>
+    <copy file="${temp.jar.path.PPP_Tom.war}" tofile="${artifact.temp.output.ppp_tom:war}/PPP_Tom.war"/>
+  </target>
+   
+  <target name="build.all.artifacts" depends="artifact.ppp_tom:war" description="Build all artifacts">
+    <mkdir dir="${artifact.output.ppp_tom:war}"/>
+    <copy todir="${artifact.output.ppp_tom:war}">
+      <fileset dir="${artifact.temp.output.ppp_tom:war}"/>
+    </copy>
+    
+    <!-- Delete temporary files -->
+    <delete dir="${artifacts.temp.dir}"/>
+  </target>
+  
+  <target name="all" depends="build.modules, build.all.artifacts" description="build all"/>
+</project>

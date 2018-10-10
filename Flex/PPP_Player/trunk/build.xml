@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Build File" basedir="." default="compileProject">
+
+    <!-- Set Up    ============================================== -->
+
+    <!-- file description -->
+    <description>Build Script</description>
+
+    <property environment="env"/>
+    <property name="FLEX_HOME" value="${env.FLEX_HOME}"/>
+    <!--location of property file -->
+    <property file="./build.properties"
+        description="properities for builds" />
+
+    <!-- timestamp -->
+    <tstamp>
+        <format property="timestamp" pattern="yyyyMMdd" />
+    </tstamp>
+
+    <!-- additional tasks -->
+    <taskdef resource="flexTasks.tasks" classpath="${FlexTasks.file}"/>
+
+    <!-- ======================================================== -->
+
+
+    <!-- Compile Project    ===================================== -->
+    <target name="compileProject"
+        depends="cleanDeploy,compileLibraries,compileApplication,cleanTempDirectories"
+        description="compiles application"/>
+
+    <target name="cleanDeploy" description="Cleans the deploy file">
+        <echo>Deleting Deploy Directory...</echo>
+        <delete dir="${Deploy.dir}" failOnError="false"
+            includeEmptyDirs="true" />
+        <echo>Deleted Deploy Directory</echo>
+        <echo>Creating Deploy Directory...</echo>
+        <mkdir dir="${Deploy.dir}" />
+        <echo>Created Deploy Directory</echo>
+    </target>
+
+    <target name="compileApplication">
+        <echo>Compiling SWF To Deploy</echo>
+        <mxmlc file="${basedir}/${Src.dir}/${Application.name}.mxml"
+            incremental="false"
+            actionscript-file-encoding="UTF-8"
+            output="${Deploy.dir}/${Application.name}.swf"
+            debug="${Debug.Boolean}"
+            keep-generated-actionscript="false">
+            <load-config filename="${basedir}/${Application.name}_config.xml"/>
+            <default-background-color>0xFFFFFF</default-background-color>
+            <metadata>
+                <creator>Weisong Liu</creator>
+                <publisher>Medical College of Wisconsin</publisher>
+                <language>EN</language>
+            </metadata>
+            <compiler.source-path path-element="${basedir}/${Src.dir}" />
+            <compiler.library-path dir="${basedir}/" append="true">
+                <include name="${basedir}/${DeploySWC.dir}"/>
+            </compiler.library-path>
+        </mxmlc>
+        <echo>Compiled SWF To Deploy</echo>
+    </target>
+    <!-- ======================================================== -->
+
+    <!-- NONEMBEDDED FILES ====================================== -->
+    <target name="copyNonEmbeddedFiles">
+        <echo>Deleting Deploy Assets Directory...</echo>
+        <delete dir="${DeployAssets.dir}" failOnError="false" includeEmptyDirs="true" />
+        <echo>Deleted Deploy Assets Directory</echo>
+        <echo>Creating Assets Folder</echo>
+        <mkdir dir="${DeployAssets.dir}"/>
+        <echo>Created Assets Folder</echo>
+        <echo>Copy Nonembedded Resources To Deploy</echo>
+        <copy todir="${DeployAssets.dir}" includeemptydirs="false" overwrite="true">
+            <fileset dir="${Assets.dir}"/>
+        </copy>
+        <echo>Copied Nonembedded Resources To Deploy</echo>
+    </target>
+    <!-- ======================================================== -->
+
+    <!-- COMPILE LIBRARIES ====================================== -->
+    <target name="compileLibraries" depends="cleanDeploySWCs,copyPrecompiledSWCs" />
+
+    <target name="cleanDeploySWCs">
+        <echo>Deleting Deploy SWC Directory...</echo>
+        <delete dir="${DeploySWC.dir}" failOnError="false" includeEmptyDirs="true"/>
+        <echo>Deleted Deploy SWC Directory</echo>
+        <echo>Creating Deploy SWC Directory...</echo>
+        <mkdir dir="${DeploySWC.dir}"/>
+        <echo>Created Deploy SWC Directory</echo>
+    </target>
+
+    <target name="copyPrecompiledSWCs">
+        <echo>Copying to Deploy SWC Directory...</echo>
+        <copy todir="${ApplicationLibs.dir}" includeemptydirs="false" overwrite="true">
+            <fileset dir="${LibraryBin.dir}"/>
+        </copy>
+        <echo>Copied to Deploy SWC Directory...</echo>
+    </target>
+
+    <target name="compileLibrary" description="compiles the Library">
+        <echo>Compiling Library SWC To Deploy SWC Folder</echo>
+        <compc debug="${Debug.Boolean}" output="${DeploySWC.dir}/${Library.name}.swc" locale="en_US">
+            <load-config filename="./RGD_Flash_library_config.xml"/>
+            <source-path path-element="${LibrarySrc.dir}"/>
+            <include-sources dir="${LibrarySrc.dir}" includes="*"/>
+            <compiler.library-path dir="${LibraryLibs.dir}/" append="true">
+                <include name="*.swc"/>
+            </compiler.library-path>
+            <metadata>
+                <creator>Weisong Liu</creator>
+                <publisher>RGD</publisher>
+                <language>EN</language>
+            </metadata>
+        </compc>
+        <echo>Compiled Library SWC To Deploy SWC Folder</echo>
+    </target>
+
+    <!-- Clean Up =============================================== -->
+    <target name="cleanTempDirectories">
+        <echo>Deleting Deploy SWC Directory...</echo>
+        <delete dir="${DeploySWC.dir}" failOnError="false" includeEmptyDirs="true"/>
+        <echo>Deleted Deploy SWC Directory</echo>
+    </target>
+
+    <!-- ======================================================== -->
+
+</project>

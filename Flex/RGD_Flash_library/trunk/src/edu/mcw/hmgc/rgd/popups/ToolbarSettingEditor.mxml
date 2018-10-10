@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="400" height="300" title="Settings">
+	<mx:Script>
+		<![CDATA[
+			import edu.mcw.hmgc.rgd.diagrammer.ToolbarSetting;
+			
+			import mx.managers.PopUpManager;
+			import mx.utils.ObjectUtil;
+			
+			public var onReturn:Function = null;
+			[Bindable]
+			private var _toolbarSetting:ToolbarSetting = new ToolbarSetting();
+			public function set toolbarSetting(value:ToolbarSetting):void
+			{
+				if (value == null) return;
+//				registerClassAlias( "ToolbarSetting", ToolbarSetting );
+//				var obj:Object = ObjectUtil.copy(value);
+//				_toolbarSetting =  ToolbarSetting(obj);
+				_toolbarSetting.copy(value);
+			}
+			public function get toolbarSetting():ToolbarSetting
+			{
+				return _toolbarSetting;
+			}
+			
+			protected function button_cancel_clickHandler(event:MouseEvent):void
+			{
+				_toolbarSetting = null;
+				closeWindow();
+			}
+			
+			protected function button_ok_clickHandler(event:MouseEvent):void
+			{
+				closeWindow();
+				if (onReturn != null) onReturn(_toolbarSetting);
+			}
+
+			protected function closeWindow():void 
+			{
+				PopUpManager.removePopUp(this)
+			}
+			
+			protected function updateValues():void
+			{
+				_toolbarSetting.drawArea = showArea.selected;
+				_toolbarSetting.drawGrids = showGrids.selected;
+			}
+
+			protected function butShowProcessList_clickHandler(event:MouseEvent):void
+			{
+				var process_list_win:ProcessListPopup = new ProcessListPopup();
+				PopUpManager.addPopUp(process_list_win, this, false);
+				PopUpManager.centerPopUp(process_list_win);
+			}
+
+		]]>
+	</mx:Script>
+	
+	<mx:Canvas width="100%" height="10%"  x="5" y="234">
+		<mx:Button label="Cancel" id="button_cancel" click="button_cancel_clickHandler(event)" x="269" y="0"/>
+		<mx:Button label="OK" id="button_ok" click="button_ok_clickHandler(event)" x="205" y="0"/>
+	</mx:Canvas>
+	<mx:CheckBox id="showArea" x="10" y="49" label="Show screen area" selected="{_toolbarSetting.drawArea}" click="updateValues()"/>
+	<mx:Button x="10" y="84" label="Show Process List" id="butShowProcessList" click="butShowProcessList_clickHandler(event)"/>
+	<mx:CheckBox id="showGrids" x="10" y="18" label="Show grids" selected="{_toolbarSetting.drawGrids}" click="updateValues()"/>
+</mx:TitleWindow>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" verticalScrollPolicy="off"
+		   width="100%" height="100%" 
+		   horizontalScrollPolicy="off" xmlns:graphics="edu.mcw.hmgc.rgd.graphics.*" xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*">
+	
+	<mx:Script>
+		<![CDATA[
+			import edu.mcw.hmgc.rgd.diagrammer.Diagram;
+			import edu.mcw.hmgc.rgd.diagrammer.PhysiologicalPathwayDiagram;
+			
+			private var _mainDiagram:Object;
+			
+			public function initDiagram(parent_diagram:Object=null):void
+			{
+				_mainDiagram = parent_diagram;
+				
+				_mainDiagram.mainCanvas = mainCanvas;
+				_mainDiagram.mainSurface = mainSurface;
+				_mainDiagram.lowCanvas = lowerCanvas;
+				_mainDiagram.linkSurface = linkSurface;
+				_mainDiagram.bkCanvas = bkCanvas;
+				_mainDiagram.tooltipsCanvas = tooltipsCanvas;
+				
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Image id="snapShotImage" x="0" y="0"/>
+	
+	<mx:Canvas id="board" 
+			   verticalScrollPolicy="off"
+			   horizontalScrollPolicy="off" borderColor="0">
+		<mx:Canvas width="100%" height="100%" id="bkCanvas"  
+				   verticalScrollPolicy="off"
+				   horizontalScrollPolicy="off">
+		</mx:Canvas>
+<!--		<mx:Image y="42" height="100%" source="{logoCls}" autoLoad="true" x="62"/>
+-->		
+		<mx:Canvas width="100%" height="100%" id="lowerCanvas"  
+				   verticalScrollPolicy="off"
+				   horizontalScrollPolicy="off">
+		</mx:Canvas>	
+		
+		<graphics:Surface id="mainSurface" width="1024" height="768" top="0"/>
+		<mx:Canvas width="100%" height="100%" id="mainCanvas"
+				   verticalScrollPolicy="off" horizontalScrollPolicy="off" >
+		</mx:Canvas>
+		<graphics:Surface id="linkSurface" width="{width}" height="{height}" top="0" bottom="150"/>
+		<mx:Canvas id="tooltipsCanvas" width="100%" height="100%" verticalScrollPolicy="off"
+				   horizontalScrollPolicy="off">
+		</mx:Canvas>
+	</mx:Canvas>
+	<mx:Image id="snapShotImageFront" x="0" y="0" visible="false"/>
+	<controls:RGDLogoCanvas id="logoCanvas" horizontalCenter="0" verticalCenter="0" visible="false"/>
+</mx:Canvas>

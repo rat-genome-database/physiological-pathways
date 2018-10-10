@@ -1,0 +1,914 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="400" height="300" xmlns:local="*"
+		   creationComplete="init()" resize="resizeBoard()" show="showPopups()" 
+		   hide="hidePopups()" xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*">
+	<mx:Script>
+		<![CDATA[
+			import caurina.transitions.Tweener;
+			
+			import com.famfamfam.silk.IconLibrary;
+			import com.roguedevelopment.objecthandles.ObjectHandles;
+			
+			import edu.mcw.hmgc.rgd.Tree;
+			import edu.mcw.hmgc.rgd.diagrammer.CircleHandle;
+			import edu.mcw.hmgc.rgd.diagrammer.Diagram;
+			import edu.mcw.hmgc.rgd.diagrammer.PhysiologicalPathwayDiagram;
+			import edu.mcw.hmgc.rgd.diagrammer.PointHandle;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.BasicPointModel;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.BasicShapeModel;
+			import edu.mcw.hmgc.rgd.graphics.ShowHideEffects;
+			import edu.mcw.hmgc.rgd.popups.LayerList;
+			import edu.mcw.hmgc.rgd.popups.LayerTree;
+			import edu.mcw.hmgc.rgd.popups.LinkListPopup;
+			import edu.mcw.hmgc.rgd.popups.ProcessListPopup;
+			import edu.mcw.hmgc.rgd.popups.ProcessListPopupPlayer;
+			import edu.mcw.hmgc.rgd.utils.DiagramLibrary;
+			import edu.mcw.hmgc.rgd.utils.FilterUtility;
+			import edu.mcw.hmgc.rgd.utils.GeometryUtil;
+			import edu.mcw.hmgc.rgd.utils.GraphicsUtil;
+			import edu.mcw.hmgc.rgd.utils.ValueChangedEvent;
+			import edu.mcw.hmgc.rgd.utils.events.FileEvent;
+			import edu.mcw.hmgc.rgd.utils.grouping.Layer;
+			
+			import flexlib.containers.SuperTabNavigator;
+			import flexlib.scheduling.scheduleClasses.schedule_internal;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.collections.ArrayCollection;
+			import mx.collections.ItemResponder;
+			import mx.containers.TitleWindow;
+			import mx.controls.Alert;
+			import mx.controls.Button;
+			import mx.controls.Menu;
+			import mx.controls.PopUpButton;
+			import mx.core.Application;
+			import mx.core.UIComponent;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.events.MenuEvent;
+			import mx.managers.PopUpManager;
+			import mx.printing.FlexPrintJob;
+			import mx.printing.FlexPrintJobScaleType;
+			import mx.utils.StringUtil;
+			import mx.utils.XMLUtil;
+			
+			import org.alivepdf.layout.Mode;
+			import org.alivepdf.layout.Orientation;
+			import org.alivepdf.layout.Position;
+			import org.alivepdf.layout.Size;
+			import org.alivepdf.layout.Unit;
+			import org.alivepdf.pdf.PDF;
+			import org.alivepdf.saving.Method;
+
+			[Bindable]
+			public var fileNameHistory:Array = [];
+			
+			[Bindable]
+			public var mainDiagram:PhysiologicalPathwayDiagram;
+			public var objHandles:ObjectHandles;
+			public var poiHandles:ObjectHandles;
+			
+			private var _boardMarginTop:Number = 1;
+			private var _boardMarginLeft:Number = 5;
+			private var _boardMarginRight:Number = 5;
+			private var _boardMarginBottom:Number = 5;
+
+			private var _fileName:String = new String();
+			private var _lastDiagramRect:Rectangle = null;
+			private var _lastObjRect:Rectangle = null;
+			private var _lastScale:Number = 0;
+			private var _currentScale:Number = 0;
+
+			private var _initialized:Boolean = false;
+
+			private var lastSnapshot:Bitmap;
+			
+			static public var diagramTitleConnectorWidth:Number = 30;
+			
+			private var process_list_win:ProcessListPopupPlayer = null;
+			private var link_list_win:LinkListPopup = null;
+			private var _relatedMenu:Menu = null;
+			private var _itemArray:Array = [];
+			private var _relatedListArray:Array = [];
+
+			public function get relatedMenu():Menu
+			{
+				return _relatedMenu;
+			}
+
+			public function createRelatedMenu():Menu
+			{
+				if (_relatedMenu == null)
+				{
+					_itemArray = [];
+					_relatedListArray = [];
+					var menu_xml:XML = mainDiagram.links.copy();
+					delete menu_xml.link_group.*;
+					var xml_list:XMLList = menu_xml.link_group;
+					for each (var item:XML in xml_list)
+					{
+						var menu_item:Object = new Object;
+						menu_item.label = item.@label[0].toString();
+						menu_item.type = "check";
+						menu_item.selected = false;
+						_itemArray.push(menu_item);	
+						_relatedListArray.push(null);
+					}
+					
+					_relatedMenu = Menu.createMenu(null, _itemArray, false);
+					_relatedMenu.addEventListener(MenuEvent.ITEM_CLICK, relatedMenuClicked);
+				} else
+				{
+					_relatedMenu.dataProvider = _itemArray;
+				}
+				_relatedMenu.show(parentCanvas.tool_box.x + parentCanvas.buttonShowInfoMenu.x, parentCanvas.toolBar.y + parentCanvas.tool_box.height);
+				return _relatedMenu;
+			}
+
+			protected function relatedMenuClicked(event:MenuEvent):void
+			{
+				_relatedMenu.visible = false;
+				menu_click_handle(event);
+			}
+
+			private var _lastSubtitle:String;
+			protected var buttonBack:Button = new Button();
+
+			protected var _cbData:Array = [];
+			private var _layerList:Object = null;
+			private var _selectedLayer:Number = -1;
+			
+			private var _layerSyncTabUp:DiagramCanvasTab = null;
+			private var _layerSyncTabDown:DiagramCanvasTab = null;
+
+			public function get layerSyncTabDown():DiagramCanvasTab
+			{
+				return _layerSyncTabDown;
+			}
+
+			public function set layerSyncTabDown(value:DiagramCanvasTab):void
+			{
+				_layerSyncTabDown = value;
+			}
+
+
+			public function get layerSyncTabUp():DiagramCanvasTab
+			{
+				return _layerSyncTabUp;
+			}
+
+			public function set layerSyncTabUp(value:DiagramCanvasTab):void
+			{
+				_layerSyncTabUp = value;
+			}
+
+			
+			public function get fileName():String
+			{
+				return _fileName;
+			}
+
+			public function set fileName(value:String):void
+			{
+				_fileName = value;
+				if (!_initialized) return;
+				if (fileName.length > 0) loadFile(fileName);
+			}
+
+			private function init():void
+			{
+				mainDiagram = new PhysiologicalPathwayDiagram(this);
+				mainDiagram.state = Diagram.STATE_PLAYER;
+				diagramCanvas.initDiagram(mainDiagram);
+				
+				objHandles = new ObjectHandles( mainDiagram.mainCanvas, null, new ClassFactory(CircleHandle));
+				poiHandles = new ObjectHandles( mainDiagram.mainCanvas, null, new ClassFactory(PointHandle));
+				BasicShapeModel.object_handles = objHandles;
+				BasicPointModel.object_handles = poiHandles;
+				
+				mainDiagram.objectHandles = objHandles;
+				mainDiagram.poiHandles = poiHandles;
+
+				addEventListener("showCalloutsChanged", setShowCallouts);
+				addEventListener("showProcessListChanged", cbShowLink_click_handle);
+//				addEventListener(MenuEvent.ITEM_CLICK, menu_click_handle);
+				
+				addEventListener("DIAGRAM_READY", diagramReady);
+				_initialized = true;
+				fileName = fileName;
+			}
+			
+			protected function setShowCallouts(event:Event=null):void
+			{
+				mainDiagram.showCallouts = parentCanvas.cbShowCallouts.selected;
+			}
+			
+			protected function diagramReady(event:Event):void
+			{
+				if (mainDiagram.type != "Normal") {
+					mainDiagram.showCallouts = true;	
+				} 
+				if (fileNameHistory.length > 1)
+				{
+					resizeBoard();
+					zoomInDiagram(
+						function ():void {
+							hideSnapshot();
+							showBackButton(true);
+						}
+					);
+				} else
+				{
+					diagramCanvas.board.alpha = 0.5;
+					hideSnapshot();
+					resizeBoard();
+					diagramCanvas.board.scaleX = 1;
+					diagramCanvas.board.scaleY = 1;
+					if (diagramCanvas.snapShotImageFront.visible) {
+						zoomOut2LastRect(
+							function ():void {
+								diagramCanvas.snapShotImageFront.visible = false;
+								diagramCanvas.board.filters = [];
+								showBackButton(false);
+							}
+						);
+					} else {
+						updateParentToolBox();
+					}
+					Tweener.addTween(diagramCanvas.board, {alpha:1, time:2, transition:"easeIn"});
+				}
+			}
+			
+			protected function showTitle():void
+			{
+//				if (mainDiagram.title == null) return;
+//				parentCanvas.diagramTitle.text = mainDiagram.title;
+//				parentCanvas.diagramSubtitle.text = mainDiagram.subTitle;
+//				parentCanvas.diagramSubtitle.alpha = 1;
+				parentCanvas.setTitles();
+ 			}
+			
+			public function resizeBoard():void 
+			{
+				if (mainDiagram == null || mainDiagram.contentBounds == null) return;
+				var new_scale_x:Number = width / (mainDiagram.contentBounds.width + _boardMarginLeft + _boardMarginRight);
+				var new_scale_y:Number = height / (mainDiagram.contentBounds.height + _boardMarginTop + _boardMarginBottom);
+				var new_scale:Number = Math.min(new_scale_x, new_scale_y);
+				diagramCanvas.board.width = (mainDiagram.contentBounds.x + mainDiagram.contentBounds.width + _boardMarginLeft + _boardMarginRight) * diagramCanvas.board.scaleX;
+				diagramCanvas.board.height = (mainDiagram.contentBounds.y + mainDiagram.contentBounds.height + _boardMarginTop + _boardMarginBottom) * diagramCanvas.board.scaleY;
+				
+				diagramCanvas.board.move(- mainDiagram.contentBounds.x + (this.width / new_scale - mainDiagram.contentBounds.width)/2, 
+					- mainDiagram.contentBounds.y + (this.height / new_scale - mainDiagram.contentBounds.height)/2); 
+				diagramCanvas.scaleX = new_scale;
+				diagramCanvas.scaleY = new_scale;
+				diagramCanvas.snapShotImage.scaleX = _lastScale ==0 ? 1 : _lastScale / diagramCanvas.scaleX;
+				diagramCanvas.snapShotImage.scaleY = _lastScale ==0 ? 1 : _lastScale / diagramCanvas.scaleY;
+				diagramCanvas.logoCanvas.parentWidth = width / new_scale;
+				diagramCanvas.logoCanvas.parentHeight = height / new_scale;
+				validateNow();
+				rearrangeLinkList();
+			}
+			
+			protected function zoomInDiagram(do_next:Function=null):void {
+				
+				var width_to:Number = mainDiagram.contentBounds.x + mainDiagram.contentBounds.width + _boardMarginLeft + _boardMarginRight;
+				var height_to:Number = mainDiagram.contentBounds.y + mainDiagram.contentBounds.height + _boardMarginTop + _boardMarginBottom;
+				var x_to:Number = diagramCanvas.board.x;
+				var y_to:Number = diagramCanvas.board.y;
+				
+				var new_scale:Number = _lastScale / diagramCanvas.scaleX;
+				
+				diagramCanvas.board.x = (_lastObjRect.x + _lastDiagramRect.x) * new_scale;
+				diagramCanvas.board.y = (_lastObjRect.y + _lastDiagramRect.y) * new_scale;
+				diagramCanvas.board.scaleX = _lastObjRect.width / width_to;
+				diagramCanvas.board.scaleY = _lastObjRect.height / height_to;
+				
+				diagramCanvas.snapShotImage.x *= new_scale;
+				diagramCanvas.snapShotImage.y *= new_scale;
+				var transition_time:Number = 2;
+				var delay_time:Number = 1;
+				diagramCanvas.board.alpha = .5;
+				diagramCanvas.board.visible = true;
+				showBackButton(true, false);
+				if (diagramCanvas.board.filters.length == 0)
+					FilterUtility.addDropShadowFilter(diagramCanvas.board, 0x000000, 10, 5, 0.9);
+				Tweener.addTween(diagramCanvas.board, {x:x_to, y:y_to, 
+					scaleX:1, scaleY:1,
+					alpha: 1,
+					delay:delay_time,
+					time:transition_time, transition:"easeIn", onComplete:do_next});
+				parentCanvas.diagramSubtitle.alpha = 0;
+				Tweener.addTween(parentCanvas.diagramSubtitle, {alpha:1,
+					delay:delay_time,
+					time:transition_time, transition:"easeIn"});
+
+				parentCanvas.diagramTitleConnector.width = 0;
+				Tweener.addTween(parentCanvas.diagramTitleConnector, {width:diagramTitleConnectorWidth,
+					delay:delay_time,
+					time:transition_time, transition:"easeIn"});
+			}
+			
+			private function get parentCanvas():Object
+			{
+				return parent.parent.parent as Object;
+			}
+			
+			protected function hideSnapshot():void {
+				diagramCanvas.board.filters = [];
+				diagramCanvas.snapShotImage.visible = false;
+			}
+
+			public function print2Printer():void
+			{
+				// Using the built-in printing feature of the Flash player
+				var print_job:FlexPrintJob = new FlexPrintJob();
+				var print_job_options:PrintJobOptions = new PrintJobOptions(true);
+				if (print_job.start())
+				{
+					parentCanvas.tool_box.visible = false;
+					var old_scaleX:Number = parentCanvas.parent.scaleX;
+					var old_scaleY:Number = parentCanvas.parent.scaleY;
+					var old_width:Number = parentCanvas.parent.width;
+					var old_height:Number = parentCanvas.parent.height;
+					
+					var scale_new:Number = Math.min(print_job.pageWidth / parentCanvas.width,
+						print_job.pageHeight / parentCanvas.height);	
+					
+					parentCanvas.parent.scaleX = parentCanvas.parent.scaleY = scale_new;
+//					parentCanvas.width = parentCanvas.width * parentCanvas.scaleX / old_scaleX;
+//					parentCanvas.height = parentCanvas.height * parentCanvas.scaleX / old_scaleX;
+//					diagramCanvas.scaleX = 1;
+//					diagramCanvas.scaleY = 1;
+//					print_job.addObject(diagramCanvas, FlexPrintJobScaleType.SHOW_ALL);
+//					if (process_list_win != null) print_job.addObject(process_list_win, FlexPrintJobScaleType.NONE);
+					
+					var bmp_data:BitmapData = new BitmapData(parentCanvas.parent.width, 
+						parentCanvas.parent.height, true, 0x00);
+					bmp_data.draw(parentCanvas.parent as IBitmapDrawable);
+					parentCanvas.overview_image.width = parentCanvas.parent.width;
+					parentCanvas.overview_image.height = parentCanvas.parent.height;
+					
+					parentCanvas.overview_image.source = new Bitmap(bmp_data);
+
+//					print_job.addPage(parentCanvas.overview_image, new Rectangle(0,0,parentCanvas.overview_image.width,
+//						parentCanvas.overview_image.height), print_job_options);
+					print_job.addObject(parentCanvas.overview_image);
+					print_job.send();
+					parentCanvas.parent.scaleY = old_scaleY;
+					parentCanvas.parent.scaleX = old_scaleX;
+					parentCanvas.tool_box.visible = true;
+				}
+			}
+			
+			public function print2PDF():void
+			{
+				var pdf_file:PDF = new PDF(Orientation.LANDSCAPE, Unit.MM, Size.LETTER);
+				pdf_file.addPage();
+				pdf_file.gotoPage(1);
+//				pdf_file.addImage(diagramCanvas, new org.alivepdf.layout.Resize ( Mode.FIT_TO_PAGE, Position.CENTERED ) );
+//				if (process_list_win != null)
+//				{
+//					pdf_file.addPage();
+//					pdf_file.gotoPage(2);
+//					pdf_file.addImage(process_list_win, new org.alivepdf.layout.Resize ( Mode.FIT_TO_PAGE, Position.CENTERED ));
+//				}
+				parentCanvas.tool_box.visible = false;
+				pdf_file.addImage(parentCanvas.parent as DisplayObject, new org.alivepdf.layout.Resize ( Mode.FIT_TO_PAGE, Position.CENTERED ) );
+				var saving:FileReference = new FileReference();
+				saving.addEventListener(IOErrorEvent.IO_ERROR, pdfIOError);
+				saving.save( pdf_file.save ( Method.LOCAL ), 
+					mainDiagram.fileName.replace(".xml", "") + ".pdf" );
+				parentCanvas.tool_box.visible = true;
+			}
+			
+			protected function pdfIOError(event:IOErrorEvent):void
+			{
+				Alert.show("Cannot write to PDF file. Please make sure that the file is not being used!", "Error", 4, null, null, IconLibrary.EXCLAMATION);
+			}
+			
+			public function insideDiagram(obj:Object, file_name:String):void {
+				centerObject(obj, 
+					function ():void {
+						loadFile(file_name);
+					});
+			}
+			
+			protected function prepareZoomOut(do_next:Function):void {
+				diagramCanvas.snapShotImage.visible = false;
+				diagramCanvas.snapShotImageFront.source = null;
+				var bmp_data:BitmapData = new BitmapData(diagramCanvas.board.width, diagramCanvas.board.height, true, 0x00);
+				bmp_data.draw(diagramCanvas.board); 
+				lastSnapshot = new Bitmap(bmp_data);
+				diagramCanvas.snapShotImageFront.x = diagramCanvas.board.x;
+				diagramCanvas.snapShotImageFront.y = diagramCanvas.board.y;
+				diagramCanvas.snapShotImageFront.source = lastSnapshot;
+				diagramCanvas.snapShotImageFront.visible = true;
+				diagramCanvas.board.visible = true;
+				_currentScale = diagramCanvas.scaleX;
+				do_next();
+			}
+			
+			protected function centerObject(obj:Object, do_next:Function=null):void {
+				diagramCanvas.snapShotImage.source = null;
+				var bmp_data:BitmapData = new BitmapData(diagramCanvas.board.width, diagramCanvas.board.height, true, 0x00);
+				bmp_data.draw(diagramCanvas.board); 
+				lastSnapshot = new Bitmap(bmp_data);
+				diagramCanvas.snapShotImage.x = diagramCanvas.board.x;
+				diagramCanvas.snapShotImage.y = diagramCanvas.board.y;
+				diagramCanvas.snapShotImage.scaleX = diagramCanvas.board.scaleX;
+				diagramCanvas.snapShotImage.scaleY = diagramCanvas.board.scaleY;
+				diagramCanvas.snapShotImage.source = lastSnapshot;
+				diagramCanvas.snapShotImage.visible = true;
+				diagramCanvas.board.visible = false;
+				
+				if (obj.hasOwnProperty("model")) {
+					var real_rect:Rectangle = GeometryUtil.realRect(obj.model);
+					_lastObjRect = real_rect.clone();
+					_lastObjRect.width /= 4;
+					_lastObjRect.height /= 4;
+					_lastObjRect.x += _lastObjRect.width / 2 * 3;
+					_lastObjRect.y += _lastObjRect.height / 2 * 3;
+					_lastDiagramRect = new Rectangle();
+					_lastDiagramRect.x = diagramCanvas.board.x;
+					_lastDiagramRect.y = diagramCanvas.board.y;
+					_lastDiagramRect.width = diagramCanvas.board.width;
+					_lastDiagramRect.height = diagramCanvas.board.height;
+					_lastScale = diagramCanvas.scaleX;
+				}
+				do_next();
+			}
+			
+			protected function zoomOut2LastRect(do_next:Function=null):void {
+				diagramCanvas.snapShotImageFront.visible = true;
+				diagramCanvas.snapShotImageFront.alpha = 1;
+				var width_to:Number = diagramCanvas.snapShotImageFront.width / diagramCanvas.snapShotImageFront.scaleX;
+				var height_to:Number = diagramCanvas.snapShotImageFront.height / diagramCanvas.snapShotImageFront.scaleY;
+				var new_scale:Number = _currentScale / diagramCanvas.scaleX;
+				
+				diagramCanvas.snapShotImageFront.scaleX = new_scale;
+				diagramCanvas.snapShotImageFront.scaleY = new_scale;
+				diagramCanvas.snapShotImageFront.x *= new_scale;
+				diagramCanvas.snapShotImageFront.y *= new_scale;
+				var x_to:Number = ( _lastObjRect.x + diagramCanvas.board.x);
+				var y_to:Number = ( _lastObjRect.y + diagramCanvas.board.y);
+				var scaleX_to:Number = _lastObjRect.width / width_to; 
+				var scaleY_to:Number = _lastObjRect.height / height_to;
+				var transition_time:Number = 2;
+
+				var zoomout_delay:Number = 1;
+				if (diagramCanvas.snapShotImageFront.filters.length == 0)
+					FilterUtility.addDropShadowFilter(diagramCanvas.snapShotImageFront, 0x000000, 10, 5, 0.9);
+
+				Tweener.addTween(diagramCanvas.snapShotImageFront, {x:x_to, y:y_to, 
+					scaleX:scaleX_to, scaleY:scaleY_to,
+					delay:zoomout_delay,
+					time:transition_time, transition:"easeIn", onComplete:do_next});
+
+				parentCanvas.diagramTitleConnector.width = diagramTitleConnectorWidth;
+
+				Tweener.addTween(parentCanvas.diagramTitleConnector, {width:0,
+					delay:zoomout_delay,
+					time:transition_time, transition:"easeIn"});
+				parentCanvas.diagramSubtitle.alpha = 1;
+				Tweener.addTween(parentCanvas.diagramSubtitle, {alpha:0.1,
+					delay:zoomout_delay,
+					time:transition_time, transition:"easeIn",
+				onComplete:showTitle});
+			}
+
+			public function loadFile(file_name:String, lastFile:Boolean=false):void
+			{
+				hideLayerList();
+				removeProcessList();
+				removeLinkList();
+				if (lastFile)
+				{
+					file_name = fileNameHistory.pop();					
+				} 
+				else
+				{
+					showBackButton(false, false, false);
+					fileNameHistory.push(_fileName);
+					_lastSubtitle = parentCanvas.lastGroupLabel;
+				}
+				DiagramLibrary.getFile(this, file_name, loaded);
+				_selectedLayer = -1;
+
+				_fileName = file_name;
+				mainDiagram.showCallouts = false;
+				_relatedMenu = null;
+			}
+			
+			protected function loaded(event:edu.mcw.hmgc.rgd.utils.events.FileEvent):void
+			{
+				removeEventListener(edu.mcw.hmgc.rgd.utils.events.FileEvent.FILE_READY, loaded);
+				mainDiagram.load(new XMLList(event.data), _fileName);
+				createLayerList((mainDiagram.layers.layers.length > 0));
+			}
+			
+			private function createLayerList(show_list:Boolean=true):void
+			{
+				if (show_list)
+				{
+					if (_layerList != null)
+					{
+						PopUpManager.removePopUp(_layerList as TitleWindow);
+						_layerList = null;
+					}
+					if (_layerList == null)
+					{
+						if (mainDiagram.layerGroups == null)
+						{
+							_layerList = new LayerList();
+							_layerList.x = 5;//parentCanvas.width;
+							_layerList.y = 80;
+							PopUpManager.addPopUp(_layerList as LayerList, this);
+							_layerList.visible = this.visible;
+							_layerList.changeHandler = layerCB_changeHandler;
+//							_layerList.rollOverHandler = layerCB_rollOverHandler;
+							_layerList.itemClickHandler = layerCB_rollOverHandler;
+//							_layerList.rollOutHandler = layerCB_rollOutHandler;
+							createLayersMenu();
+
+							selectedLayer = 0;
+						} 
+						else
+						{
+							_layerList = new LayerTree();
+							_layerList.x = 5;//parentCanvas.width;
+							_layerList.y = 80;
+							PopUpManager.addPopUp(_layerList as LayerTree, this);
+							_layerList.visible = this.visible;
+							_layerList.changeHandler = layerCB_changeHandler;
+							_layerList.rollOverHandler = layerCB_rollOverHandler;
+							_layerList.rollOutHandler = layerCB_rollOutHandler;
+							LayerTree(_layerList).dataProvider = mainDiagram.layerGroups;
+							LayerTree(_layerList).tree.selectedIndex = 1;
+							layerCB_changeHandler(null);
+							mainDiagram.showLayers([]);
+						}
+					}
+				}
+				else
+				{
+					if (_layerList != null) 
+					{
+						if (_layerList is LayerList)
+						{
+							PopUpManager.removePopUp(_layerList as LayerList);
+						}
+						else 
+						{
+							PopUpManager.removePopUp(_layerList as LayerTree);
+						}
+						_layerList = null;
+					}
+				}
+			}
+			
+			protected function createLayersMenu():void
+			{
+				_cbData = [];
+
+				for each (var layer:Layer in mainDiagram.layers.layers) {
+					_cbData.push(new String(layer.label));
+				}
+				
+				_layerList.dataProvider = _cbData;
+				selectedLayer = _layerList.list.selectedIndex = 0;
+			}
+			
+			protected function showLayers(selected_layer_index:Number):void 
+			{
+				var layers_to_show:Array = [];
+				if (selected_layer_index >= 0) {
+					layers_to_show.push(selected_layer_index);
+					//				var layers_menu_array:ArrayCollection = layersMenu.dataProvider as ArrayCollection;
+					//				for (var i:int=0; i < mainDiagram.layers.layers.length; i++)
+					//				{
+					//					if (layers_menu_array[i].toggled) layers_to_show.push(i);
+					//				}
+					mainDiagram.showLayers(layers_to_show);
+				}
+			}
+			
+			public function setBackgroundColor(bk_color:Object):void
+			{
+				diagramCanvas.setStyle("backgroundColor", bk_color);
+				this.setStyle("backgroundColor", bk_color);
+//				toolBox.setStyle("backgroundColor", bk_color);
+				if (this.parent != null) SuperTabNavigator(this.parent).setStyle("backgroundColor", bk_color);
+			}
+			
+			protected function buttonBack_clickHandler(event:MouseEvent):void
+			{
+				Application.application.dispatchEvent(new Event("BackToLastDiagram"));
+			}
+		
+			public function backToLastDiagram():void
+			{
+				
+				if (_lastObjRect != null) {
+					prepareZoomOut(
+						function ():void {
+							loadFile("", true);
+						}
+					);
+				} 
+			}
+
+			protected function showBackButton(if_show:Boolean=true, enabled:Boolean=true, update_label:Boolean=true):void{
+ 				buttonBack.includeInLayout = buttonBack.visible = if_show;
+				buttonBack.label = _lastSubtitle;
+				buttonBack.enabled = enabled;
+				updateParentToolBox();
+			}
+
+			protected function cbShowLink_click_handle(event:Event):void
+			{
+	 			if (parentCanvas.cbShowLinks.selected) {
+					if (process_list_win != null) return;
+					
+					process_list_win = PopUpManager.createPopUp(diagramCanvas.board, ProcessListPopupPlayer) as ProcessListPopupPlayer; 
+					process_list_win.processList = mainDiagram.processList;
+					process_list_win.x = parentCanvas.width;
+					process_list_win.y = parentCanvas.height - process_list_win.height;
+				} else {
+					removeProcessList();
+				}
+	 		}
+			
+			protected function removeProcessList():void 
+			{
+				if (process_list_win == null) return;
+				process_list_win.dispatchEvent(new CloseEvent("close"));
+				process_list_win = null;
+			}
+			
+			protected function removeLinkList():void 
+			{
+				for (var i:int = 0; i < _relatedListArray.length; i++)
+				{
+					PopUpManager.removePopUp(_relatedListArray[i]);
+					_relatedListArray[i] = null;
+				}
+			}
+			
+			protected function hideLayerList():void
+			{
+				if (_layerList != null) {
+					_layerList.visible = false;
+				}
+			}
+			
+			protected function showPopups():void 
+			{
+				ShowHideEffects.showFadeIn(this, true);
+				if (process_list_win != null) {
+					process_list_win.visible = true;
+				}
+				if (_layerList != null) {
+					_layerList.visible = true;
+				}
+				for (var i:int = 0; i < _itemArray.length; i++) 
+				{
+					if (_relatedListArray[i] != null) _relatedListArray[i].visible = _itemArray[i].selected;
+				}
+			}
+
+			protected function hidePopups():void 
+			{
+				ShowHideEffects.hideFadeOut(this, false);
+				if (process_list_win != null) {
+					process_list_win.visible = false;
+				}
+				for (var i:int = 0; i < _itemArray.length; i++) 
+				{
+					if (_relatedListArray[i] != null) _relatedListArray[i].visible = false;
+				}
+				hideLayerList();
+			}
+			
+			public function updateParentToolBox():void
+			{
+				if (parentCanvas.navigator.selectedChild != this) return;
+
+				parentCanvas.cbShowCallouts.selected = mainDiagram.showCallouts;
+				parentCanvas.cbShowLinks.selected = (process_list_win != null);
+				
+				parentCanvas.buttonBack.visible = buttonBack.visible;
+				parentCanvas.buttonBack.label = buttonBack.label;
+				parentCanvas.buttonBack.toolTip = "Go back to ["+buttonBack.label+"]";
+				parentCanvas.buttonBack.includeInLayout = buttonBack.includeInLayout;
+				parentCanvas.buttonBack.enabled = buttonBack.enabled;
+				parentCanvas.buttonShowInfoMenu.visible = (mainDiagram.links != null);
+				showTitle();
+ 			}
+
+			protected function layerCB_changeHandler(event:ListEvent):void
+			{
+				if (_layerList is LayerTree)
+				{
+					if (_layerList.tree.selectedItem == null) return;
+					if (_layerList.checkLeafSelection()) {
+						selectedLayer = _layerList.tree.selectedItem.@ref_layer;
+					} else {
+						selectedLayer = -1;
+					}					
+				}
+				else
+				{
+					selectedLayer = _layerList.list.selectedIndex;
+				}
+				syncRelatedTabLayers();
+			}
+			
+			protected function layerCB_rollOverHandler(event:ListEvent):void
+			{
+				if (_layerList is LayerTree)
+				{
+					if (event.itemRenderer.data.localName() == "layer") {
+						showLayerDescription(event.itemRenderer.data.@ref_layer, event.itemRenderer.x,
+							event.itemRenderer.y);
+					} else if (event.itemRenderer.data.localName() == "layer_group" &&
+						event.itemRenderer.data.@description != null) {
+						_layerList.showItemDescription(event.itemRenderer.data.@description, event.itemRenderer.x,
+							event.itemRenderer.y);
+					}
+				}
+				else
+				{
+					showLayerDescription(event.rowIndex, event.itemRenderer.x,
+						event.itemRenderer.y);
+				}
+			}
+			
+			protected function layerCB_rollOutHandler(event:ListEvent):void
+			{
+				_layerList.fadeOutItemDescription();
+			}
+			
+			protected function menu_click_handle(event:MenuEvent):void
+			{
+				//removeLinkList();
+//				if (event.index == 0) 
+//				{
+//					link_list_win = null;
+//					return;
+//				}
+				event.item.selected = !event.item.selected;
+				if (_relatedListArray[_relatedMenu.selectedIndex] == null) 
+				{
+					link_list_win = PopUpManager.createPopUp(diagramCanvas.board, LinkListPopup) as LinkListPopup;
+					link_list_win.title = event.item.label;
+					link_list_win.dataProvider = mainDiagram.getLinkGroups(event.index).link;
+					link_list_win.x = parentCanvas.width;
+					link_list_win.y = diagramCanvas.localToGlobal(new Point(diagramCanvas.width, 0)).y;
+					link_list_win.menuItem = _itemArray[_relatedMenu.selectedIndex];
+					moveDownOldPopup(link_list_win);
+					_relatedListArray[_relatedMenu.selectedIndex] = link_list_win;
+				} else
+				{
+					_relatedListArray[_relatedMenu.selectedIndex].visible = event.item.selected;
+				}
+				_relatedMenu.selectedItem = null;
+			}
+
+			protected function moveDownOldPopup(link_list_win:LinkListPopup, check_drag:Boolean=true, start:int=0, end:int=-1 ):void
+			{
+				if (end == -1) end = _relatedListArray.length;
+				for (var i:int = 0; i < end; i++)
+				{
+					if (_relatedListArray[i] != null && (!check_drag || !_relatedListArray[i].dragged))
+					{
+						//_relatedListArray[i].y += (link_list_win.height + 10);
+						var new_y:int = _relatedListArray[i].y + (link_list_win.height + 10);
+						var new_x:int = _relatedListArray[i].x;
+						
+						if (new_y > this.height)
+						{
+							new_y = this.height - _relatedListArray[i].height - 5;
+							new_x -= 100;
+							if (new_x < 0) new_x = 5;
+						}
+						Tweener.addTween(_relatedListArray[i], {y:new_y, x:new_x, time:1});
+					}
+				}
+			}
+			
+			protected function rearrangeLinkList():void
+			{
+				var new_y:int = diagramCanvas.localToGlobal(new Point(diagramCanvas.width, 0)).y;
+				var new_x:int = parentCanvas.width;
+				for (var i:int = 0; i < _relatedListArray.length; i++) 
+				{
+					if (_relatedListArray[i] != null)
+					{
+//						_relatedListArray[i].x = new_x;
+//						_relatedListArray[i].y = new_y;
+						_relatedListArray[i].slideTo(new_x - _relatedListArray[i].width, new_y);
+						
+						new_y += (_relatedListArray[i].height + 10);
+						if (new_y > this.height)
+						{
+							new_y = this.height - _relatedListArray[i].height - 5;
+							new_x -= 100;
+							if (new_x < 0) new_x = 5;
+						}
+					}
+				}
+				if (process_list_win != null) {
+					new_x = parentCanvas.width - process_list_win.width;
+					new_y = parentCanvas.height - process_list_win.height;
+					process_list_win.slideTo(new_x, new_y);
+				}				
+
+			}
+			
+			protected function showLayerDescription(layer_number:Number, item_x:Number, item_y:Number):void
+			{
+				_layerList.showItemDescription(mainDiagram.layers.layers[layer_number].description,
+					item_x, item_y);
+			}
+			
+			public function set selectedLayer(layer_index:Number):void
+			{
+				if (layer_index == _selectedLayer) return;
+				_selectedLayer = layer_index;
+				showLayers(layer_index);
+				if (_layerList != null && _layerList is LayerList) _layerList.list.selectedIndex = _selectedLayer;
+			}
+			
+			public function set selectedLayerGroup(layer_group_id:Number):void
+			{
+				if (_layerList == null || !_layerList.hasOwnProperty("tree")) return;
+				var layer_tree:Tree = _layerList.tree as Tree;
+				if (layer_tree == null) return;
+				for each (var layer_xml:XML in layer_tree.dataProvider)
+				{
+					if (layer_xml.@ref_layer[0] == layer_group_id) 
+					{
+						layer_tree.selectedItem = layer_xml;
+						selectedLayer = -1;
+					}
+				}
+			}
+			
+			public function syncRelatedTabLayers():void
+			{
+//				if (_layerSyncTabUp != null && _layerList.hasOwnProperty("tree") &&
+//					_layerList.tree != null) _layerSyncTabUp.selectedLayer = _layerList.tree.selectedItem.parent().@id;
+//				if (_layerSyncTabDown != null && _layerList.hasOwnProperty("list") && 
+//					_layerList.list != null) _layerSyncTabDown.selectedLayerGroup = _layerList.list.selectedIndex;
+
+				if (_layerList.hasOwnProperty("list") && _layerList.list != null) 
+				{
+					var value_change_event:ValueChangedEvent = new ValueChangedEvent("LayerSelectionChanged", true);
+					value_change_event.newValue = _layerList.list.selectedIndex;
+					parent.dispatchEvent(value_change_event);
+				}
+				
+//				if (_layerSyncTabUp != null && _layerList.hasOwnProperty("list") &&
+//					_layerList.list != null) _layerSyncTabUp.selectedLayer = _layerList.list.selectedIndex;;
+//				if (_layerSyncTabDown != null && _layerList.hasOwnProperty("list") && 
+//					_layerList.list != null) _layerSyncTabDown.selectedLayer = _layerList.list.selectedIndex;
+
+			}
+		]]>
+	</mx:Script>
+
+	
+	<local:DiagramCanvas id="diagramCanvas" verticalScrollPolicy="off"
+						 width="100%" height="100%" 
+						 horizontalScrollPolicy="off">
+	</local:DiagramCanvas>
+<!--	<controls:List id="layerCB" change="layerCB_changeHandler(event)" 
+				   visible="false"  width="165" height="422" />
+-->
+	<mx:HBox id="toolBox" horizontalAlign="left" width="100%" height="30" borderColor="#0567AC" cornerRadius="2">
+<!--		<mx:HBox width="100%">
+			<mx:Label id="diagramTitle" fontSize="16" color="#000000" fontFamily="Times New Roman" fontWeight="bold"/>
+			<mx:Button id="buttonBack" label="Back" click="buttonBack_clickHandler(event)" visible="false" alpha=".9" />
+			<mx:Label id="diagramTitleConnector" text="->" 
+					  fontSize="16" color="#000000" fontFamily="Times New Roman" fontWeight="bold"
+					  visible="{buttonBack.visible}"
+					  includeInLayout="{buttonBack.visible}"/>
+		<mx:Label id="diagramSubtitle" fontSize="16" color="#000000" fontFamily="Times New Roman" fontWeight="bold"/>
+-->	
+<!--
+		<mx:PopUpButton  id="layerButton" 
+							 openAlways="true" label="Layers" alpha=".8" visible="false" includeInLayout="false"/>
+-->
+<!--		<mx:ComboBox id="layerCB" change="layerCB_changeHandler(event)" color="#970400" 
+					 fontWeight="normal" borderColor="#0329CA" fontSize="15"
+					 visible="false" />
+-->
+				 
+<!--		</mx:HBox>
+		<mx:CheckBox id="cbShowCallouts" label="Show Callouts" alpha=".6" />
+		<mx:CheckBox id="cbShowLinks" label="Show Process List" click="cbShowLink_click_handle(event)" alpha=".6" />
+		<mx:Button width="20" id="buttonPrint" icon="{IconLibrary.PRINTER}" click="buttonPrint_clickHandler(event)" visible="true" alpha=".6" />
+-->
+	</mx:HBox>
+</mx:Canvas>

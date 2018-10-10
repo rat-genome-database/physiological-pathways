@@ -1,0 +1,826 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" 
+				layout="absolute"
+				backgroundAlpha="1"
+				xmlns:rgd="edu.mcw.hmgc.rgd.*"
+				xmlns:objecthandles="com.roguedevelopment.objecthandles.*"
+				xmlns:degrafa="com.degrafa.*"
+				backgroundColor="#343434" 
+				creationComplete="init()" 
+				click="backgroundClick(event)" 
+				horizontalScrollPolicy="off"
+				verticalScrollPolicy="off"
+				xmlns:paint="com.degrafa.paint.*"
+				xmlns:geometry="com.degrafa.geometry.*" 
+				xmlns:repeaters="com.degrafa.repeaters.*" 
+				xmlns:transform="com.degrafa.transform.*" 
+				xmlns:diagrammer="edu.mcw.hmgc.rgd.diagrammer.*" 
+				xmlns:graphics="edu.mcw.hmgc.rgd.graphics.*" 
+				xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*"
+				resize="application1_resizeHandler(event)">
+	
+	<mx:Script>
+		<![CDATA[
+			import com.degrafa.GeometryComposition;
+			import com.degrafa.geometry.RegularRectangle;
+			import com.roguedevelopment.objecthandles.IConstraint;
+			import com.roguedevelopment.objecthandles.ObjectChangedEvent;
+			import com.roguedevelopment.objecthandles.ObjectHandles;
+			import com.roguedevelopment.objecthandles.SelectionEvent;
+			import com.roguedevelopment.objecthandles.constraints.MovementConstraint;
+			
+			import edu.mcw.hmgc.rgd.bio.Relationship;
+			import edu.mcw.hmgc.rgd.diagrammer.CircleHandle;
+			import edu.mcw.hmgc.rgd.diagrammer.Diagram;
+			import edu.mcw.hmgc.rgd.diagrammer.ObjectSource;
+			import edu.mcw.hmgc.rgd.diagrammer.PointHandle;
+			import edu.mcw.hmgc.rgd.diagrammer.Toolbar;
+			import edu.mcw.hmgc.rgd.diagrammer.links.Arrow;
+			import edu.mcw.hmgc.rgd.diagrammer.links.LinkComponent;
+			import edu.mcw.hmgc.rgd.diagrammer.links.LinkIcon;
+			import edu.mcw.hmgc.rgd.diagrammer.links.ThreePointLink;
+			import edu.mcw.hmgc.rgd.diagrammer.shapes.*;
+			import edu.mcw.hmgc.rgd.popups.Loading;
+			import edu.mcw.hmgc.rgd.popups.TextEditor;
+			import edu.mcw.hmgc.rgd.ui.controls.HScrollBar;
+			import edu.mcw.hmgc.rgd.ui.controls.ScrollBar;
+			import edu.mcw.hmgc.rgd.utils.Configurations;
+			import edu.mcw.hmgc.rgd.utils.FileLoader;
+			import edu.mcw.hmgc.rgd.utils.ImageEntry;
+			import edu.mcw.hmgc.rgd.utils.events.EditorEvent;
+			import edu.mcw.hmgc.rgd.utils.events.FileEvent;
+			import edu.mcw.hmgc.rgd.utils.events.LibraryEvent;
+			import edu.mcw.hmgc.rgd.utils.events.ViewEvent;
+			import edu.mcw.hmgc.rgd.utils.libraries.ImageLibrary;
+			import edu.mcw.hmgc.rgd.utils.libraries.LinkLibrary;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.controls.HScrollBar;
+			import mx.effects.Parallel;
+			import mx.effects.Resize;
+			import mx.effects.Rotate;
+			import mx.events.ResizeEvent;
+			import mx.graphics.Stroke;
+			import mx.managers.PopUpManager;
+			import mx.messaging.AbstractConsumer;
+			import mx.messaging.messages.ISmallMessage;
+
+			[Embed(source='/assets/fonts/GGSUBSCR.TTF', 
+				fontName='Subscript', 
+				mimeType='application/x-font')] 
+			private var subscriptFont:Class;
+			
+			[Embed(source='/assets/fonts/GGSUPERS.TTF', 
+				fontName='Superscript', 
+				mimeType='application/x-font')] 
+			private var superscriptFont:Class;
+			
+			[Embed(source='/assets/fonts/ARIAL.TTF', 
+				fontName='Arial', 
+			    fontStyle='normal',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var arialFont:Class;
+			
+			[Embed(source='/assets/fonts/ARIALBD.TTF', 
+				fontName='Arial', 
+			    fontStyle='normal',
+			    fontWeight='bold',
+				mimeType='application/x-font')] 
+			private var arialBoldFont:Class;
+			
+			[Embed(source='/assets/fonts/ARIALI.TTF', 
+				fontName='Arial', 
+			    fontStyle='italic',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var arialItalicFont:Class;
+			
+			[Embed(source='/assets/fonts/ARIALBI.TTF', 
+				fontName='Arial', 
+			    fontStyle='italic',
+			    fontWeight='bold',
+				mimeType='application/x-font')] 
+			private var arialBoldItalicFont:Class;
+			
+			[Embed(source='/assets/fonts/verdana.TTF', 
+				fontName='Verdana', 
+			    fontStyle='normal',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var verdanaFont:Class;
+			
+			[Embed(source='/assets/fonts/verdanab.TTF', 
+				fontName='Verdana', 
+			    fontStyle='normal',
+			    fontWeight='bold',
+				mimeType='application/x-font')] 
+			private var verdanaBoldFont:Class;
+			
+			[Embed(source='/assets/fonts/verdanai.TTF', 
+				fontName='Verdana', 
+			    fontStyle='italic',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var verdanaItalicFont:Class;
+			
+			[Embed(source='/assets/fonts/verdanaz.TTF', 
+				fontName='Verdana', 
+			    fontStyle='italic',
+			    fontWeight='bold',
+				mimeType='application/x-font')] 
+			private var verdanaBoldItalicFont:Class;
+			
+			[Embed(source='/assets/fonts/SYMBOL.TTF', 
+				fontName='Symbol', 
+			    fontStyle='normal',
+			    fontWeight='normal',
+				mimeType='application/x-font')] 
+			private var symbolFont:Class;
+			
+//			[Embed(source='/assets/fonts/ARIALBD.ttf', 
+//				fontName='Arial', 
+//			    fontStyle='normal',
+//			    fontWeight='bold',
+//				mimeType='application/x-font')] 
+//			private var arialBoldFont:Class;
+//			
+
+//			[Embed(systemFont='Verdana', 
+//		        fontName='VerdanaSystem', 
+//        		mimeType='application/x-font'
+//     		)] 
+//			private var verdanaSystem:Class;
+			
+			
+			public var objHandles:ObjectHandles;
+			public var poiHandles:ObjectHandles;
+			
+			public static const canvasWidth:int = 2048;
+			public static const canvasHeight:int = 1532;
+			
+			
+			public static const _toolBarHeight:Number = 105;
+			
+			private static var container_list:XML;
+			public static var image_library:ImageLibrary;
+			
+			public var imageClasses:Object;
+			public var imageContainers:Object;
+			public var imagePos:Object;
+			
+			private var _loadingPopup:Loading; 
+			
+			private var mainDiagram:Diagram;
+			private var htmlTextWatcher:ChangeWatcher = null;
+			private var linkTypeWatcher:ChangeWatcher = null;
+			private var linkWeightWatcher:ChangeWatcher = null;
+			private var arrowTypeWatcher:ChangeWatcher = null;
+			private var linkDashWatcher:ChangeWatcher = null;
+			private var linkGapWatcher:ChangeWatcher = null;
+			[Bindable]
+			private var overviewBMP:Bitmap;
+			
+			private var pos_body:Point;
+			private var pos_parts:Point;
+			private var pos_others:Point;
+			
+			private var containers:Array = new Array();
+			private var container_pos:Array = new Array();
+			
+			private var _isMouseDown:Boolean = false;
+			public var toolbar:Toolbar;
+			
+			private var _rectangle:RegularRectangle = new RegularRectangle();
+			private var _control:GeometryComposition = new GeometryComposition();
+			protected function init() : void
+			{
+				addEventListener(LibraryEvent.CONFIGURATION_READY, onConfigurationReady);
+				Configurations.load(this);
+				
+				mainDiagram = new Diagram(this);
+				mainDiagram.state = Diagram.STATE_DESIGNER;
+				mainDiagram.mainCanvas = mainCanvas;
+				mainDiagram.mainSurface = mainSurface;
+				mainDiagram.lowCanvas = lowerCanvas;
+				mainDiagram.linkSurface = linkSurface;
+				mainDiagram.bkCanvas = bkCanvas;
+				mainDiagram.showCallouts = true;
+
+				_loadingPopup = new Loading();
+				PopUpManager.addPopUp(_loadingPopup, this, true);
+				PopUpManager.centerPopUp(_loadingPopup);
+
+				
+				_rectangle.graphicsTarget = [dragCanvas];
+				_rectangle.fill = new SolidFill("#88", .2);
+				_rectangle.stroke = new SolidStroke("#44", .8);
+			}
+
+			protected function onConfigurationReady(event:LibraryEvent):void
+			{
+				removeEventListener(LibraryEvent.CONFIGURATION_READY, 
+					onConfigurationReady);
+				// Link all types to the XML
+				LinkIcon.types = Configurations.settings.linkicon_list; 
+				Arrow.types = Configurations.settings.arrow_list;
+				ThreePointLink.types = Configurations.settings.link_list;			
+				Relationship.types = Configurations.settings.relationship_list;
+				
+				container_list = Configurations.settings.container_list[0];
+				toolbar = new Toolbar();
+				toolbar.mainBoard = board;
+				toolbar.ori_width = board.width;
+				toolbar.ori_height = board.height;
+				toolbar.x = 10;
+				toolbar.setStyle("bottom", "0");
+				toolbar.setStyle("width", "100%");
+				addChild(toolbar);
+				BindingUtils.bindProperty(bot_surface, "alpha", toolbar.settings, 
+					"drawArea");
+				
+				BindingUtils.bindProperty(gridSurface, "alpha", toolbar.settings, 
+					"drawGrids");
+				
+				imageContainers = new Object();
+				imagePos = new Object();
+				var ix_start:Number = 20;
+				var ix:Number = ix_start;
+				var iy:Number = 30;
+				var rw:Number = 60;
+				var rh:Number = 60;
+				var max_ix:Number = 2 * rw + ix - 1;
+				
+				for each (var container_entry:XML in container_list.container)
+				{
+					var a_canvas:edu.mcw.hmgc.rgd.ui.controls.Canvas = 
+						new edu.mcw.hmgc.rgd.ui.controls.Canvas();
+					a_canvas.label = container_entry.@label;
+					a_canvas.name = container_entry.@container_name;
+					imageContainers[a_canvas.name] = a_canvas; 
+					imagePos[a_canvas.name] = new Point(ix, iy);
+					a_canvas.width = componentPanel.width;
+//					a_canvas.setStyle("width", "100%");
+					a_canvas.setStyle("height", "100%");
+					
+					componentPanel.addChild(a_canvas);
+				}
+				
+				
+				image_library =  new ImageLibrary(this);
+				this.addEventListener(LibraryEvent.IMAGE_LIBRARY_READY,
+					onImageLibraryReady);
+				
+				objHandles = new ObjectHandles( mainDiagram.mainCanvas, 
+					null, new ClassFactory(CircleHandle));
+				poiHandles = new ObjectHandles( mainDiagram.mainCanvas, 
+					null, new ClassFactory(PointHandle));
+				var objConstrains:MovementConstraint = 
+					new MovementConstraint();
+				objConstrains.minX = 0;
+				objConstrains.minY = 0;
+				objConstrains.maxX = mainCanvas.width;
+				objConstrains.maxY = mainCanvas.height;
+				objHandles.addDefaultConstraint(objConstrains);
+				poiHandles.addDefaultConstraint(objConstrains);
+				BasicShapeModel.object_handles = objHandles;
+				BasicPointModel.object_handles = poiHandles;
+				
+				objHandles.addEventListener(ObjectChangedEvent.OBJECT_MOVING,
+					onObjectMoving );
+				objHandles.addEventListener(ObjectChangedEvent.OBJECT_MOVED, 
+					onObjectMoved );
+				objHandles.addEventListener(ObjectChangedEvent.OBJECT_RESIZED, 
+					onObjectResized );
+//				objHandles.addEventListener(ObjectChangedEvent.OBJECT_RESIZING, onObjectResizing );
+				objHandles.addEventListener(ObjectChangedEvent.OBJECT_ROTATED, 
+					onObjectRotated );
+//				objHandles.addEventListener(ObjectChangedEvent.OBJECT_ROTATING, onObjectRotating );
+				objHandles.selectionManager.addEventListener(
+					SelectionEvent.ADDED_TO_SELECTION, onObjectSelected );
+				objHandles.selectionManager.addEventListener(
+					SelectionEvent.SELECTION_CLEARED, onSelectionCleared );
+				objHandles.selectionManager.addEventListener(
+					SelectionEvent.REMOVED_FROM_SELECTION, onObjUnselected);
+				
+				poiHandles.addEventListener(ObjectChangedEvent.OBJECT_MOVING, 
+					onPointMoving);
+					
+				lowerCanvas.addEventListener(MouseEvent.MOUSE_DOWN, 
+					onMouseDown);
+
+				mainDiagram.mainCanvas.addEventListener(EditorEvent.DRAG_SELECT_START, 
+					onDragSelectStart);
+// Let the canvas capture key events
+//				mainCanvas.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+//				board.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+//				mainSurface.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+//
+				
+				addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+				
+//				mainCanvas.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
+//				mainCanvas.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMove);
+//				mainSurface.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
+//				mainSurface.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMove);
+//				mainSurface.addEventListener(MouseEvent.MOUSE_UP, onMouseUp);
+
+				mainDiagram.objectHandles = objHandles;
+				mainDiagram.poiHandles = poiHandles;
+				toolbar.mainDiagram = mainDiagram;
+				ObjectSource.diagram = mainDiagram;
+				
+				addEventListener(ViewEvent.CONTENT_CHANGED, onUpdateOverview);
+				addEventListener(ViewEvent.SELECTION_CHANGED, onSelectionChanged);
+				mainDiagram.backgroundColor = "0xFFFFFF";
+			}
+			
+			protected function onDragSelectStart(event:EditorEvent):void
+			{
+				lowerCanvas.dispatchEvent(event.mouseEvent);
+			}
+			
+			protected function onMouseDown(event:MouseEvent):void
+			{
+				trace("mouse down: " + event.target);
+				if ((event.target == lowerCanvas || event.target == mainCanvas)
+				&& mainDiagram.dragSelectionEnabled) {
+					mainDiagram.clearSelection();
+					_unglowSelection();
+					_isMouseDown = true;
+
+					_rectangle.x = event.localX;
+					_rectangle.y = event.localY;
+					_rectangle.width = 0;
+					_rectangle.height = 0;
+					dragCanvas.visible = true;
+					dragCanvas.addEventListener(MouseEvent.MOUSE_UP, onMouseUp);
+					dragCanvas.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMove);
+				}
+			}
+			
+			protected function onMouseMove(event:MouseEvent):void
+			{
+				trace("mouse move: " + event.target);
+				if (_isMouseDown)
+				{
+					_rectangle.width = event.localX - _rectangle.x;
+					_rectangle.height = event.localY - _rectangle.y;
+					_rectangle.drawToTargets();
+				}
+				
+			}
+			
+			protected function onMouseUp(event:MouseEvent):void
+			{
+				trace("mouse up: " + event.target);
+				if (_isMouseDown)
+				{
+					_isMouseDown = false;
+					mainDiagram.dragSelect(new Rectangle(_rectangle.width > 0 
+						? _rectangle.x : _rectangle.x + _rectangle.width,
+						_rectangle.height > 0 ? _rectangle.y : _rectangle.y 
+						+ _rectangle.height, Math.abs(_rectangle.width), 
+						Math.abs(_rectangle.height))); 
+					_rectangle.width = 0;
+					_rectangle.height = 0;
+					_rectangle.drawToTargets();
+					dragCanvas.visible = false;
+					dragCanvas.removeEventListener(MouseEvent.MOUSE_UP, 
+						onMouseUp);
+					dragCanvas.removeEventListener(MouseEvent.MOUSE_MOVE, 
+						onMouseMove);
+				}
+			}
+			
+			
+			protected function onKeyDown(event:KeyboardEvent):void {
+				if (!event.altKey) {
+					if (!event.ctrlKey) {
+						if (!event.shiftKey) {
+							switch (event.keyCode) {
+								case 0x2e: // Del
+									mainDiagram.deleteSelection();
+									break;
+								case 27: // ESC
+									mainDiagram.clearSelection();
+									break;
+							}
+						}
+					} else {
+						if (!event.shiftKey) {
+							switch (event.keyCode) {
+								case 0x2e:  // Del
+									mainDiagram.deleteSelection();
+									break;
+								case 0x41: // A
+									mainDiagram.selectAll();
+									Alert.show(event.keyCode.toString(), 
+										"key code");
+									trace("key code: " + event.keyCode);
+									break; 
+								case 83: // S
+									toolbar.save();
+									break;
+							}
+						}
+					}
+				};
+				return;
+			}
+			
+			protected function onImageLibraryReady(event:LibraryEvent):void {
+				var source:ObjectSource;
+				var ix_start:Number = 20;
+				var ix:Number = ix_start;
+				var iy:Number = 30;
+				var rw:Number = 60;
+				var rh:Number = 60;
+				var max_ix:Number = 2 * rw + ix - 1;
+				
+				PopUpManager.removePopUp(_loadingPopup);
+				_loadingPopup = null;
+				removeEventListener(LibraryEvent.IMAGE_LIBRARY_READY, 
+					onImageLibraryReady);
+				imageClasses = { 
+					svg:new ClassFactory(edu.mcw.hmgc.rgd.diagrammer.shapes.SVGShape),
+					png:new ClassFactory(edu.mcw.hmgc.rgd.diagrammer.shapes.PNGShape),
+					swf:new ClassFactory(edu.mcw.hmgc.rgd.diagrammer.shapes.PNGShape),
+					gif:new ClassFactory(edu.mcw.hmgc.rgd.diagrammer.shapes.GIFShape),
+					rco:new ClassFactory(edu.mcw.hmgc.rgd.diagrammer.shapes.RectCalloutShape)
+				};
+				
+				for each (var imageEntry:ImageEntry in new ArrayCollection(ImageLibrary.images)) {
+					
+					var pos_cur:Point = imagePos[imageEntry.type];
+					ix = pos_cur.x;
+					iy = pos_cur.y;
+					source = new ObjectSource(imageClasses[imageEntry.format], imageEntry.name,
+						imageContainers[imageEntry.type], mainCanvas, new Point(ix, iy));
+					ix = ix + rw;
+					if (ix > max_ix) {
+						ix = ix_start;
+						iy = iy + rh;
+					}
+					pos_cur.x = ix;
+					pos_cur.y = iy;
+				}
+				
+			}
+			
+			protected function onObjectMoved(event:ObjectChangedEvent):void
+			{
+				mainDiagram.onObjectMoved(event);
+			}
+			
+			protected function onObjectMoving(event:ObjectChangedEvent):void
+			{
+				for each(var obj_mod:BasicShapeModel in 
+					objHandles.selectionManager.currentlySelected) {
+					var obj:Object = objHandles.getDisplayForModel(obj_mod);
+					
+					if (obj is BasicShape) {
+						var obj_sel:BasicShape = obj as BasicShape;
+						obj_sel.adjustToModel();
+					} else if (obj_sel is LinkComponent) {
+					} 
+				}
+			}
+			
+			protected function onPointMoving(event:ObjectChangedEvent):void
+			{
+				for each(var obj_mod:BasicShapeModel in 
+					poiHandles.selectionManager.currentlySelected) {
+					var obj:Object = poiHandles.getDisplayForModel(obj_mod);
+					
+					if (obj is RectCalloutShape) {
+						var obj_sel:RectCalloutShape = obj as RectCalloutShape;
+						trace("moving to: " + obj_mod.x + " " + obj_mod.y);
+						obj_sel.tailModel = obj_mod;
+					} else if (obj_sel is LinkComponent) {
+					}
+					
+				}
+			}
+			
+			protected function onObjectResized(event:ObjectChangedEvent):void
+			{
+				mainDiagram.resizeSelection();
+			}
+			
+			protected function onObjectRotated(event:ObjectChangedEvent):void
+			{
+				mainDiagram.rotateSelection();
+				//				trace("Something was rotated!");
+			}
+			
+			protected function onObjectSelected(event:SelectionEvent):void
+			{
+				if (mainDiagram.isLoading) return;
+				var obj_mod:BasicShapeModel = objHandles.selectionManager.currentlySelected[
+					objHandles.selectionManager.currentlySelected.length-1] as BasicShapeModel;
+				// Add the whole group
+				if (mainDiagram.designerMode == Diagram.DESIGNER_DIAGRAM_MODE)
+				{
+					if (!(event.mouseEvent != null && event.mouseEvent.ctrlKey) && mainDiagram.grouper.objectGrouped(obj_mod))
+					{
+						mainDiagram.addObjGroupToSelection(obj_mod);
+					}
+				}
+					
+				var obj_sel1:Object = objHandles.getDisplayForModel(obj_mod);
+				if (obj_sel1 is SVGShape || obj_sel1 is PNGShape || obj_sel1 is RectCalloutShape) {
+					var textEditor:TextEditor = TextEditor.instance;
+					textEditor.unbind();
+					if (objHandles.selectionManager.currentlySelected.length == 1 
+						&& !mainDiagram.addingSelection)
+					{
+						var obj_sel:BasicShape = obj_sel1 as BasicShape;
+						obj_sel.dispatchEvent(event);
+						//					if (htmlTextWatcher != null) htmlTextWatcher.unwatch();
+						if (textEditor.editor != null) 
+						{
+							textEditor.htmlText  = obj_sel.shapeLabel;
+							textEditor.objTooltip.text = obj_sel.tag;
+							textEditor.bind(obj_sel, ["shapeLabel", "tag"]);
+
+						}
+						obj_sel.setFocus();
+					}
+				} else if (obj_sel1 is LinkComponent) {
+					if (arrowTypeWatcher != null) arrowTypeWatcher.unwatch();
+					if (linkDashWatcher != null) linkDashWatcher.unwatch();
+					if (linkGapWatcher != null) linkGapWatcher.unwatch();
+					if (linkTypeWatcher != null) linkTypeWatcher.unwatch();
+					if (linkWeightWatcher != null) linkWeightWatcher.unwatch();
+					if (objHandles.selectionManager.currentlySelected.length == 1 
+						&& !mainDiagram.addingSelection)
+					{
+						var link_obj:LinkComponent = obj_sel1 as LinkComponent;
+						//					toolbar.ns_dash.value = link_obj.dash;
+						//					linkDashWatcher = BindingUtils.bindProperty(link_obj, "dash", toolbar.ns_dash, 'value');
+						//					toolbar.ns_gap.value = link_obj.gap;
+						//					linkGapWatcher = BindingUtils.bindProperty(link_obj, "gap", toolbar.ns_gap, 'value');
+						if (link_obj.relationship != "unknown")
+						{
+							toolbar.linkType = link_obj.relationship;
+						}
+						toolbar.link_weight_bold.selected = link_obj.boldLink;
+						linkTypeWatcher = BindingUtils.bindProperty(link_obj, 
+							"relationship", toolbar, 'linkType');
+						linkWeightWatcher = BindingUtils.bindProperty(link_obj, 
+							"boldLink", toolbar.link_weight_bold, 'selected');
+						mainCanvas.setFocus();
+						//					toolbar.arrow_type.value  = link_obj.arrowType;
+						//					arrowTypeWatcher = BindingUtils.bindProperty(link_obj, "arrowType", toolbar.arrow_type, 'selectedDataString');
+						//					textEditor.htmlText  = link_obj.ic
+						//					textEditor.bind(obj_sel, "shapeLabel");
+					}
+				}
+				glowSelection.targets.push(obj_sel1);
+				if (!mainDiagram.addingSelection) dispatchEvent(new ViewEvent(
+					ViewEvent.SELECTION_CHANGED));
+//				_parent.dispatchEvent(new ViewEvent(ViewEvent.SELECTION_CHANGED));
+			}
+			
+			protected function onObjUnselected(event:SelectionEvent):void {
+
+				if (mainDiagram.isLoading) return;
+				var obj_sel:Object = objHandles.getDisplayForModel(event.targets.pop());
+				glowSelection.targets.splice(glowSelection.targets.indexOf(obj_sel), 1);
+				unglowSelection.targets = [obj_sel];
+				unglowSelection.play();
+				unglowSelection.targets = [];
+				if (linkTypeWatcher != null)
+				{
+					linkTypeWatcher.unwatch();
+					linkTypeWatcher = null;
+				}
+				if (linkWeightWatcher != null)
+				{
+					linkWeightWatcher.unwatch();
+					linkWeightWatcher = null;
+				}
+//				_parent.dispatchEvent(new ViewEvent(ViewEvent.SELECTION_CHANGED));
+			}
+			
+			protected function onSelectionCleared(event:SelectionEvent):void
+			{
+				_unglowSelection();
+			}
+			
+			protected function backgroundClick(event:MouseEvent) : void
+			{	
+				if(event.target == background_group) {
+					objHandles.selectionManager.clearSelection();
+					TextEditor.instance.closeWindow();
+				}
+			}
+			
+			protected function _unglowSelection():void {
+				unglowSelection.targets = glowSelection.targets;
+				unglowSelection.play();
+				glowSelection.targets =[];
+				unglowSelection.targets =[];
+			}
+			
+			public function onUpdateOverview(event:ViewEvent):void 
+			{
+
+// Codes to display a selected object
+//				if (mainDiagram.selectionManager.currentlySelected.length == 1)
+//				{
+//					var model:BasicShapeModel = mainDiagram.selectionManager.currentlySelected[0];
+//					var shape:BasicShape = mainDiagram.objectHandles.getDisplayForModel(model)  as BasicShape;
+//					if (shape == null) return;
+//					
+//					var bmp:BitmapData = new BitmapData(Math.abs(shape.width), Math.abs(shape.height), true, 0x00);
+//					// Filters won't be considered as part of the object
+//					var filter_buf:Array = shape.filters;
+//					
+//					var matrix : Matrix = new Matrix();
+//					var scale_x:Number = 1;
+//					var scale_y:Number = 1;
+//					var translate_x:Number = 0;
+//					var translate_y:Number = 0;
+//					if (shape.width < 0) 
+//					{
+//						translate_x = -shape.width;
+//					}
+//					if (shape.height < 0)
+//					{
+//						translate_y = -shape.height;
+//					}
+//					matrix.translate(translate_x, translate_y);
+//					
+//					shape.filters = [];
+//					bmp.draw(shape, matrix);
+//					shape.filters = filter_buf;
+//					overviewBMP = new Bitmap(bmp);
+//					overview_image.scaleX = overview.width / bmp.width;
+//					overview_image.scaleY = overview.height / bmp.height;
+//				}
+
+				var bmp_data:BitmapData = new BitmapData(canvasWidth, canvasHeight, true, 0x00);
+				var rect_tmp:Rectangle = board.getVisibleRect();
+				rect_tmp.offset(board.horizontalScrollPosition, board.verticalScrollPosition);
+				bmp_data.fillRect(rect_tmp, 0x11FFFFFF);
+				bmp_data.draw(overviewBoard);  
+				overviewBMP = new Bitmap(bmp_data);
+			}
+			
+			protected function onSelectionChanged(event:ViewEvent):void
+			{
+				glowSelection.play();
+			}
+
+			protected function application1_resizeHandler(event:ResizeEvent):void
+			{
+				if (toolbar != null)
+				{
+					toolbar.ori_width = width-220;
+					toolbar.ori_height = height-100;
+				}
+			}
+
+		]]>
+	</mx:Script>
+	
+	
+	<geometry:RasterText id="rasterText" x="300" y="300" text="Physiological Pathway Portal"
+						 textColor="#FF00FF" size="64" horizontalCenter="0" 
+						 fontFamily="Arial" fontWeight="bold">
+		<geometry:transform>
+			<transform:TransformGroup>
+				<transform:SkewTransform skewX="0"/>
+				<transform:RotateTransform angle="0" registrationPoint="center"/>
+			</transform:TransformGroup>
+		</geometry:transform>
+		<geometry:filters>
+			<mx:GlowFilter
+				color="#FF00FF"/>
+		</geometry:filters>
+	</geometry:RasterText>
+	
+	<controls:Canvas id="board" width="{width-220}" height="{height-100}"
+			   verticalScrollPolicy="on"
+			   horizontalScrollPolicy="on">
+		<controls:Canvas id="overviewBoard" width="{canvasWidth}" height="{canvasHeight}"
+						 horizontalScrollPolicy="off" verticalScrollPolicy="off">
+			<controls:Canvas width="{canvasWidth}" height="{canvasHeight}" id="bkCanvas"  
+							 verticalScrollPolicy="off"
+							 horizontalScrollPolicy="off"/>
+			<graphics:Surface id="bot_surface" width="{canvasWidth}" 
+							  height="{canvasHeight}" top="0" bottom="150">
+				<degrafa:GeometryGroup>
+					<geometry:Line id="hline800" x="0" y="600" x1="800" y1="600"
+								   stroke="{grey}"/>
+					<geometry:Line id="vline600" x="800" y="7" x1="800" y1="600"
+								   stroke="{grey}"/>
+					<geometry:Line id="hline1000" x="0" y="700" x1="1000" y1="700"
+								   stroke="{grey}"/>
+					<geometry:Line id="vline700" x="1000" y="7" x1="1000" y1="700"
+								   stroke="{grey}"/>
+				</degrafa:GeometryGroup>
+			</graphics:Surface>
+			<degrafa:Surface id="gridSurface" width="100%" height="100%">
+				<degrafa:fills>
+					<paint:SolidFill    id="blueGradient" color="#ffffff">
+					</paint:SolidFill>
+				</degrafa:fills>
+				
+				<degrafa:strokes>
+					<paint:SolidStroke id="grey" color="#555555" 
+									   alpha=".8" weight="2" pixelHinting="true"/>
+					<paint:SolidStroke id="thinGrey" color="#cccccc" 
+									   alpha="0.5" weight="1" pixelHinting="true"/>
+				</degrafa:strokes>
+				
+				
+				<degrafa:GeometryGroup id="background_group">
+					
+					<!-- Main box -->
+					<!-- Grid lines -->  
+					<repeaters:GeometryRepeater count="{canvasWidth / 25 + 1}">
+						<geometry:Line id="vline" x="0" y="7" x1="0" y1="{canvasHeight}"
+									   stroke="{thinGrey}"/>
+						<repeaters:modifiers>
+							<repeaters:PropertyModifier  targets="{[vline]}" 
+														 property="x" modifierOperator="add"
+														 modifier="25"/>
+							<repeaters:PropertyModifier  targets="{[vline]}" 
+														 property="x1" modifierOperator="add"
+														 modifier="25"/>
+							
+						</repeaters:modifiers>
+					</repeaters:GeometryRepeater>
+					<repeaters:GeometryRepeater count="{canvasHeight / 25 + 1}">
+						<geometry:Line id="hline" x="0" y="7" x1="{canvasWidth}" y1="7"
+									   stroke="{thinGrey}"/>
+						<repeaters:modifiers>
+							<repeaters:PropertyModifier  targets="{[hline]}" 
+														 property="y" modifierOperator="add"
+														 modifier="25"/>
+							<repeaters:PropertyModifier  targets="{[hline]}" 
+														 property="y1" modifierOperator="add"
+														 modifier="25"/>
+							
+						</repeaters:modifiers>
+					</repeaters:GeometryRepeater>
+				</degrafa:GeometryGroup>		                                     
+				
+			</degrafa:Surface>
+			<controls:Canvas width="{canvasWidth}" height="{canvasHeight}" id="lowerCanvas"  
+							 verticalScrollPolicy="off"
+							 horizontalScrollPolicy="off"/>
+			
+			<graphics:Surface id="mainSurface" width="{canvasWidth}" 
+							  height="{canvasHeight}" top="0" bottom="150"/>
+			<controls:Canvas width="{canvasWidth}" height="{canvasHeight}" id="mainCanvas"
+							 verticalScrollPolicy="off" 
+							 horizontalScrollPolicy="off" />
+			<graphics:Surface id="linkSurface" width="{canvasWidth}" 
+							  height="{canvasHeight}" top="0" bottom="150"/>
+			<controls:Canvas width="{canvasWidth}" 
+							 height="{canvasHeight}" id="upperCanvas"
+							 verticalScrollPolicy="off" 
+							 horizontalScrollPolicy="off" visible="false"/>
+			
+			<controls:Canvas width="{canvasWidth}" 
+							 height="{canvasHeight}" id="dragCanvas"
+							 verticalScrollPolicy="off" 
+							 horizontalScrollPolicy="off" visible="false"/>
+		</controls:Canvas>
+	</controls:Canvas>
+
+	<!-- Right side box -->		        		       
+	<mx:Canvas width="100%" height="100%" id="controlCanvas">
+		<mx:Accordion x="{width-200}" y="10" width="190" 
+					  height="{height-_toolBarHeight-40}" id="componentPanel">
+		</mx:Accordion>
+		<mx:Canvas id="overview" x="{width-200}" y="{height-130}" 
+				   width="190" height="120" 
+				   horizontalScrollPolicy="off" verticalScrollPolicy="off" 
+				   backgroundColor="#111111">
+			<mx:Image id="overview_image" source="{overviewBMP}" x="0" y="0" 
+					  scaleX=".1" scaleY=".1"/>
+		</mx:Canvas>
+	</mx:Canvas>	
+	
+	
+	<mx:Glow id="glowSelection" duration="100"
+			 alphaFrom="0" alphaTo="1"
+			 blurXFrom="0.0" blurXTo="10.0" 
+			 blurYFrom="0.0" blurYTo="10.0"  strength="2"
+			 color="0xCC00" />
+	
+	<mx:Glow id="unglowSelection" duration="10"  
+			 alphaFrom="1" alphaTo="0"
+			 blurXFrom="10.0" blurXTo="0.0"
+			 blurYFrom="10.0" blurYTo="0.0"  strength="2"
+			 color="0xCC00"/>
+	
+</mx:Application>

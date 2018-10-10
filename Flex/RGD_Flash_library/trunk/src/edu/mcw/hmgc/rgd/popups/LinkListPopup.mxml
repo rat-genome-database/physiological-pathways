@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="400" height="288" xmlns:degrafa="com.degrafa.*"
+				creationComplete="init()" xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*"
+				close="titlewindow1_closeHandler(event)" showCloseButton="true" title="Processes" backgroundAlpha=".8"
+				borderThicknessLeft="1" borderThicknessRight="1" headerHeight="15" horizontalScrollPolicy="off"
+				verticalScrollPolicy="off"
+				mouseMove="titlewindow1_dragCompleteHandler(event)">
+	<mx:Script>
+		<![CDATA[
+			import caurina.transitions.Tweener;
+			
+			import edu.mcw.hmgc.rgd.diagrammer.Link;
+			import edu.mcw.hmgc.rgd.utils.WEBUtils;
+			import edu.mcw.hmgc.rgd.utils.libraries.LinkLibrary;
+			
+			import mx.core.Application;
+			import mx.core.mx_internal;
+			import mx.events.CloseEvent;
+			import mx.events.DragEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.events.HeaderEvent;
+			
+			private var _linkList:XMLList;
+			
+			private var _maxLines:Number = 7;
+			private var _topMargin:Number = 15;
+			
+			private var _window : UIComponent;  
+			private var _originalWidth : Number;  
+			private var _originalHeight : Number;  
+			private var _mouseDownPosition : Point;  
+			
+			public var menuItem:Object;
+			
+			private var _dragged:Boolean = false;
+			private var _originalLocation:Point;
+
+			public function get dragged():Boolean
+			{
+				return (_dragged && (_originalLocation.x != this.x ||  _originalLocation.y != this.y));
+			}
+
+			public function set dragged(value:Boolean):void
+			{
+				_dragged = value;
+			}
+			
+			
+			public function get linkList():XMLList
+			{
+				return _linkList;
+			}
+
+			public function get dataProvider():Object
+			{
+				return list.dataProvider;
+			}
+			
+			public function set linkList(value:XMLList):void
+			{
+				_linkList = value;
+				var num_ele:Number = value[0].relationship.length();
+				height =_topMargin + (num_ele >_maxLines ? (_maxLines + 1) * LinkLibrary.yStep : LinkLibrary.yStep * num_ele); 
+			}
+			
+			public function init():void
+			{
+				titleBar.buttonMode = true; 
+				titleBar.useHandCursor = true; 
+				titleTextField.mouseEnabled = false; 
+				
+				slideIn();				
+			}
+			
+			public function slideIn():void
+			{
+				// Slide-in the popup
+				var dest_x:Number = x - width;
+				alpha = 0;
+				
+				_originalLocation = new Point(dest_x, y);
+				dragged = false;
+				Tweener.addTween(this, {alpha:1, x:dest_x, time:1});
+			}
+
+			public function slideTo(dest_x:int, dest_y:int):void
+			{
+				// Slide-in the popup
+//				alpha = 0;
+				
+				_originalLocation = new Point(dest_x, dest_y);
+				dragged = false;
+				Tweener.addTween(this, {x:dest_x, y:dest_y, time:1});
+			}
+
+			public function set dataProvider(value:Object):void
+			{
+				list.dataProvider = value;
+				height = list.rowHeight*list.dataProvider.length + 20;
+				width = Math.max(list.measureWidthOfItems(), titleTextField.measuredWidth) + 30;
+			}
+			
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				// Fade out the popup
+				visible = false;
+				menuItem.selected = menuItem.toggled = false;
+//				Tweener.addTween(this, {alpha:0, time:1, onComplete:closeWindow});
+			}
+			
+			protected function closeWindow():void
+			{
+				//PopUpManager.removePopUp(this);
+//				visible = false;
+			}
+			
+			private function onResizeMouseDown( event : MouseEvent ) : void  
+			{  
+				// 1. set _window  
+				_window = UIComponent( UIComponent( event.currentTarget ).parent );  
+				
+				// 2. add mouse move and mouse up event listeners  
+				systemManager.addEventListener( MouseEvent.MOUSE_MOVE, onResizeMouseMove, true );  
+				systemManager.addEventListener( MouseEvent.MOUSE_UP, onResizeMouseUp, true );                                    
+				
+				// 3. save original width, height, rotation  
+				_originalWidth = _window.width;  
+				_originalHeight = _window.height;     
+				
+				// 4. save mouse down position  
+				_mouseDownPosition = new Point( event.stageX, event.stageY );  
+			}  
+			
+			private function onResizeMouseMove( event : MouseEvent ) : void  
+			{  
+				// 1. prevent any other mouse up events to happen  
+				event.stopImmediatePropagation();  
+				
+				// 2. calculate new width, height  
+				var newWidth:Number = _originalWidth + ( event.stageX - _mouseDownPosition.x );  
+				var newHeight:Number = _originalHeight + ( event.stageY - _mouseDownPosition.y );             
+				
+				// 3. resize window  
+				width = newWidth;
+				height = newHeight;
+			}  
+			
+			private function onResizeMouseUp( event : MouseEvent ) : void  
+			{  
+				// 1. prevent any other mouse up events to happen  
+				event.stopImmediatePropagation();     
+				
+				// 2. remove event listeners  
+				this.systemManager.removeEventListener( MouseEvent.MOUSE_MOVE, onResizeMouseMove, true );  
+				this.systemManager.removeEventListener( MouseEvent.MOUSE_UP, onResizeMouseUp , true );  
+			}  
+			
+			private function doDrawTriangle( event : FlexEvent ) : void  
+			{  
+				var uiComp : UIComponent = UIComponent( event.currentTarget );  
+				
+				uiComp.graphics.clear();  
+				uiComp.graphics.beginFill( 0x033EFF );  
+				uiComp.graphics.moveTo( uiComp.width, 0 );  
+				uiComp.graphics.lineTo( uiComp.width, uiComp.height );  
+				uiComp.graphics.lineTo( 0, uiComp.height );  
+			}  
+			
+			public override function set visible(value:Boolean):void
+			{
+				if (value)
+				{
+					Tweener.addTween(this, {alpha:1, time:1, onComplete:setVisible(value)});
+				} else
+				{
+					Tweener.addTween(this, {alpha:0, time:1, onComplete:setVisible(value)});
+				}
+	  		}
+			
+			public function set rollOverHandler(value:Function):void
+			{
+				list.addEventListener(ListEvent.ITEM_ROLL_OVER, value);
+			}
+			
+			public function set rollOutHandler(value:Function):void
+			{
+				list.addEventListener(ListEvent.ITEM_ROLL_OUT, value);
+			}
+			
+			public function itemClickHandler(event:ListEvent):void
+			{
+				var item:Object = event.currentTarget.selectedItem;
+				WEBUtils.navigateToURL(item.@url);
+				list.selectedItem = null;
+			}
+			
+			protected function itemDoubleClickHandler(event:Event):void
+			{
+			}
+			
+
+			protected function titlewindow1_dragCompleteHandler(event:MouseEvent):void
+			{
+				dragged = true;
+			}
+
+		]]>
+	</mx:Script>
+	<controls:List id="list" width="100%" rowCount="{list.dataProvider.length}"
+				   backgroundAlpha=".3" 
+				   itemRenderer="edu.mcw.hmgc.rgd.ui.controls.ListItemHtmlRender"
+				   selectable="true"
+				   verticalScrollPolicy="off" 
+				   indicatorAlpha=".7" rowHeight="24"
+				   horizontalScrollPolicy="off"
+				   doubleClickEnabled="false"
+				   itemClick="itemClickHandler(event)"
+				   height="141" y="0" rollOverColor="#02DBD8"/>
+	<!-- Resize triangle -->  
+	<mx:UIComponent 
+		alpha=".7"
+		x="{ width - 19 }" y="{ height - 35 }"  
+		width="15" height="15"  
+		creationComplete="doDrawTriangle( event )"  
+		mouseDown="onResizeMouseDown( event )" buttonMode="true" useHandCursor="true" />  
+	
+</mx:TitleWindow>

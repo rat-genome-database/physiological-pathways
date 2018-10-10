@@ -1,0 +1,16 @@
+<component name="ArtifactManager">
+  <artifact type="war" build-on-make="true" name="PPP_Tom:war">
+    <output-path>$PROJECT_DIR$/out/artifacts/PPP_Tom_war</output-path>
+    <root id="archive" name="PPP_Tom.war">
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="PPP_Tom" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="application" name="BlazeDS" />
+          <element id="library" level="project" name="Apache Axis Cleaned" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>

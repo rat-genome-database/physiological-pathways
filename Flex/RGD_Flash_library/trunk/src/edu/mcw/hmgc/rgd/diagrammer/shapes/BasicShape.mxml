@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas  
+	xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns:oh="com.roguedevelopment.objecthandles.*"
+	xmlns:degrafa="com.degrafa.*"
+	
+	creationComplete="initShapeBasic()" xmlns:degrafa1="http://www.degrafa.com/2007"
+	horizontalScrollPolicy="off"
+	verticalScrollPolicy="off"> 
+	
+	<mx:Script> 
+		<![CDATA[
+			import com.degrafa.core.IGraphicsFill;
+			import com.degrafa.core.IGraphicsStroke;
+			import com.degrafa.geometry.utilities.GeometryUtils;
+			
+			import edu.mcw.hmgc.rgd.utils.FilterUtility;
+			import edu.mcw.hmgc.rgd.utils.GeometryUtil;
+			import edu.mcw.hmgc.rgd.utils.MathUtil;
+			import edu.mcw.hmgc.rgd.utils.StrUtil;
+			import edu.mcw.hmgc.rgd.utils.WEBUtils;
+			import edu.mcw.hmgc.rgd.utils.XMLUtils;
+			
+			import mx.binding.utils.BindingUtils;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.controls.Alert;
+			import mx.controls.Text;
+			import mx.effects.Rotate;
+			import mx.events.PropertyChangeEvent;
+			
+			protected var _wathers:Array = [];
+
+//			protected var _contentCanvas:Canvas = new Canvas();
+			protected var _shapeLabel:mx.controls.Text;
+			
+			protected var _shapeLabelString:String = new String();
+			protected var _maintainAspectRatio:Boolean = false;
+			protected var _tag:String = new String();
+			
+			protected var _model:BasicShapeModel;
+			private var _displayAlpha:Number;
+
+			public function get displayAlpha():Number
+			{
+				return _displayAlpha;
+			}
+
+			public function set displayAlpha(value:Number):void
+			{
+				_displayAlpha = value;
+				this.alpha = value;
+			}
+
+			
+			protected var _state:String;
+			
+			private var _imgReadyFunc:Function = null;
+			public function get imgReadyFunc():Function
+			{
+				return _imgReadyFunc;
+			}
+
+			public function set imgReadyFunc(value:Function):void
+			{
+				_imgReadyFunc = value;
+			}
+
+			public function set state(value:String):void
+			{
+				_state = value;
+			}
+			public function get state():String
+			{
+				return _state;
+			}
+			
+			public function set model(value:BasicShapeModel):void 
+			{
+				_model = value;
+				if (value == null) return;
+				x = _model.x;
+				y = _model.y;
+				width = _model.width;
+				height = _model.height;
+			}
+			
+			public function get model():BasicShapeModel 
+			{
+				return _model;
+			}
+			
+			public var shapeType:String = "BasicShape"; 
+			/**
+			 * Initialized the fill & stroke for the shape and sets up some event listeners.
+			 **/
+			protected function initShapeBasic() : void
+			{
+				addText();
+				initShape();
+			}
+			
+			protected function addText():void
+			{
+				if (_shapeLabel != null) return;
+//				_contentCanvas.x = 0;
+//				_contentCanvas.y = 0;
+//				_contentCanvas.setStyle("width", "100%");
+//				_contentCanvas.setStyle("height", "100%");
+//				this.addChildAt(_contentCanvas, 0);
+				_shapeLabel = new mx.controls.Text();
+				_shapeLabel.setStyle("fontAntiAliasType", "normal");
+				setTextStyle();
+				_shapeLabel.htmlText = _shapeLabelString;
+				addWatcher(BindingUtils.bindSetter(adjustTextPosition, _shapeLabel, "width"));
+				addWatcher(BindingUtils.bindSetter(adjustTextPosition, _shapeLabel, "height"));
+
+				this.addChild(_shapeLabel);
+				_shapeLabel.enabled = false;
+				putTextOnTop();
+			}
+			
+			protected function labelLinkHandler(event:TextEvent):void
+			{
+//				Alert.show("url clicked", event.text);
+				//WEBUtils.navigateToURL(event.text);
+				WEBUtils.processURL(event.text, event);
+			}
+			
+			protected function setTextStyle():void
+			{
+//				_shapeLabel.setStyle("horizontalCenter", 0);
+//				_shapeLabel.setStyle("verticalCenter", 0);
+				_shapeLabel.setStyle("width", "100%");
+				_shapeLabel.setStyle("height", "100%");
+				_shapeLabel.setStyle("border", "true");
+				_shapeLabel.setStyle("borderColor", "#00FF00");
+				_shapeLabel.setStyle("borderStyle", "solid");
+				_shapeLabel.setStyle("borderThickness", "3");
+			}
+			
+			public function get Text():String
+			{
+				return _shapeLabel.text;
+			}
+			
+			public function flipH():void
+			{
+				scaleX = -scaleX;
+				adjustToModel(); 
+			}
+			
+			public function flipV():void
+			{
+				scaleY = -scaleY;
+				adjustToModel(); 
+			}
+			
+			protected function initShape() : void
+			{
+				putTextOnTop();
+			}
+			
+			public function adjustToModel():void {
+//				var x1:Number;
+//				var y1:Number;
+//				if (scaleX > 0) {
+//					x1 = _model.x;
+//				} else {
+//					x1 = _model.x + _model.width;
+//				};
+//				
+//				if (scaleY > 0) {
+//					y1 = _model.y;
+//				} else {
+//					y1 = _model.y + _model.height;
+//				};
+//				
+
+				// Re-enforce amintainAspectRatio. Necessary!
+				maintainAspectRatio = maintainAspectRatio;
+				if (model.height < 0) {
+					scaleY = -Math.abs(scaleY);
+				} else {
+					scaleY = Math.abs(scaleY);
+				}
+				if (model.width < 0) {
+					scaleX = -Math.abs(scaleX);
+				} else {
+					scaleX = Math.abs(scaleX);
+				}
+				width = Math.abs(width);
+				height = Math.abs(height);
+				x = model.x;
+				y = model.y;
+				
+				move(x, y);
+				adjustTextPosition();
+			} 
+			
+			protected function adjustTextPosition(new_value:Number=0):void
+			{
+				if (_shapeLabel == null || model == null) return;
+				var sign_scaleX:Number = scaleX > 0 ? 1 : -1;
+				var sign_scaleY:Number = scaleY > 0 ? 1 : -1;
+				var r_b:Point;
+				if (sign_scaleX > 0 && sign_scaleY > 0) {
+				}
+					r_b = new Point((model.width - _shapeLabel.width) * sign_scaleX / 2, 
+						(model.height - _shapeLabel.height) * sign_scaleY / 2);
+					GeometryUtil.rotatePoint(r_b, Math.abs(model.width) / 2, Math.abs(model.height) / 2, -model.rotation*sign_scaleX*sign_scaleY, true);
+				_shapeLabel.x = r_b.x;
+				_shapeLabel.y = r_b.y;
+				_shapeLabel.scaleX = sign_scaleX;
+				_shapeLabel.scaleY = sign_scaleY;
+			}
+			
+			public function set shapeLabel(value:String):void {
+				_shapeLabelString = value;
+				if (_shapeLabel == null) addText(); 
+				_shapeLabel.htmlText = _shapeLabelString;
+				putTextOnTop();
+			}
+			
+			protected function putTextOnTop():void
+			{
+				setChildIndex(_shapeLabel, numChildren - 1);
+			}
+			
+			public function get shapeLabel():String {
+				return _shapeLabelString;
+			}
+			
+			public function get maintainAspectRatio():Boolean
+			{
+				return _maintainAspectRatio;
+			}
+			
+			public function set maintainAspectRatio(value:Boolean):void
+			{
+				_maintainAspectRatio = value;
+			}
+
+			public function get shapeText():mx.controls.Text
+			{
+				return _shapeLabel;
+			}
+			
+			public function rotate():void
+			{
+					this.rotation = model.rotation;
+					adjustToModel();
+					var sign_scaleX:Number = scaleX > 0 ? 1 : -1;
+					var sign_scaleY:Number = scaleY > 0 ? 1 : -1;
+					
+					_shapeLabel.rotation = -model.rotation * sign_scaleX * sign_scaleY;
+			}
+			
+			public function get glowXML():String
+			{
+				if (filters == null || filters.length == 0) return "";
+				var gradientGlow:GradientGlowFilter = filters[0] as GradientGlowFilter;
+				if (gradientGlow == null) return "";
+				return XMLUtils.getXML("glowColor", gradientGlow.colors[0]);
+			}
+			
+			public function set glow(color:Object):void
+			{
+				if (color == null || color == "")
+				{
+					filters = [];
+				} else
+				{
+					filters = [FilterUtility.generateSimpleGlower(color)];
+				}
+			}
+			
+			public function moveOffset(offset_x:Number, offset_y:Number):void
+			{
+				_model.moveOffset(offset_x, offset_y);
+				adjustToModel();
+			}
+			
+			public function cleanUpMemory():void
+			{
+				removeWatchers();
+			}
+			
+			protected function removeWatchers():void
+			{
+				while (_wathers.length > 0)
+				{
+					var watcher:ChangeWatcher = _wathers.pop();
+					if (watcher != null)
+					{
+						watcher.unwatch();
+						watcher = null;
+					}
+				}
+			}
+			
+			protected function addWatcher(new_watcher:ChangeWatcher):int
+			{
+				if (new_watcher == null) return _wathers.length;
+				return _wathers.push(new_watcher);
+			}
+			
+			public function get URL():String
+			{
+				if (_shapeLabelString.length > 0)
+				{
+					return StrUtil.getURLfromHTML(_shapeLabelString);
+				}
+				return "";
+			}
+			
+			public function enableText():void
+			{
+				_shapeLabel.enabled = true;
+				_shapeLabel.addEventListener(TextEvent.LINK, labelLinkHandler);
+			}
+			
+			public function addTextShadow():void
+			{
+				FilterUtility.addOutlineFilter(shapeText);
+			}
+			
+			[Bindable]
+			public function get tag():String 
+			{
+				return _tag;
+			}
+			
+			public function set tag(value:String):void
+			{
+				_tag = value;
+			}
+
+			public function set properties(value:XMLList):void
+			{
+				if (value.@tag != null) tag = value.@tag;
+			}
+			
+			public function showTooltip():void
+			{
+				if (tag != null && tag.length >= 0)
+					toolTip = _tag;
+			}
+		]]>
+	</mx:Script>
+
+</mx:Canvas>

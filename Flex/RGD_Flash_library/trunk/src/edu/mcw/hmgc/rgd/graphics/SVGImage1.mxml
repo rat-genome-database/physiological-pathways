@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<degrafa:GeometryComposition xmlns:mx="http://www.adobe.com/2006/mxml" 
+							 xmlns:degrafa="com.degrafa.*"
+							 xmlns:rgd="edu.mcw.hmgc.rgd.graphics.*">
+	
+	<mx:Script>
+		<![CDATA[
+			import com.degrafa.GeometryComposition;
+			import com.degrafa.IGeometry;
+			import com.degrafa.core.IGraphicsFill;
+			import com.degrafa.core.IGraphicsStroke;
+			import com.degrafa.core.collections.GeometryCollection;
+			import com.degrafa.geometry.Geometry;
+			import com.degrafa.geometry.Path;
+			import com.degrafa.transform.MatrixTransform;
+			import com.roguedevelopment.objecthandles.ObjectChangedEvent;
+			
+			import edu.mcw.hmgc.rgd.utils.SVGParser;
+			import edu.mcw.hmgc.rgd.utils.SVGParser1;
+			
+			import flash.sampler.getMemberNames;
+			
+			import mx.containers.Canvas;
+			import mx.controls.Alert;
+			
+			[Bindable] private var _pathFill:com.degrafa.core.IGraphicsFill;
+			[Bindable] private var _pathStroke:com.degrafa.core.IGraphicsStroke;
+			[Bindable] private var _pathWidth:Number;		
+			[Bindable] private var _pathHeight:Number;
+			
+			private var _originalWidth:Number;
+			private var _originalHeight:Number;
+			
+			private var svgResized:Boolean = false;
+			
+			private var _xmlData:XML;
+			
+			public function set xmlData(xml_data:XML):void
+			{
+				if (xml_data == null) return;
+				var svgparser:edu.mcw.hmgc.rgd.utils.SVGParser = new SVGParser();
+				var svgparser1:SVGParser1 = new SVGParser1();
+				//				svgparser.parse(new XML(xml_data), this);
+				svgparser1.parse(new XML(xml_data));
+				
+				for each (var geo:GeometryComposition in svgparser1.geometries)
+				{
+					for each (var geo1:GeometryComposition in geo.geometry)
+					{
+						geometry.push(geo1);
+					}
+				}
+				
+				resizeAll();
+			}
+			
+			private function initImage():void
+			{
+				resizeAll();
+			}
+			
+			private function rescale():void {
+				var canvas:Canvas = graphicsTarget[0] as Canvas;
+				canvas.scaleX = width / _originalWidth;
+				canvas.scaleY = height / _originalHeight;
+			}
+			
+			public function changeStroke():void {
+				if (_pathStroke == null) return;
+				for each (var path1:Geometry in geometry) {
+					//					path1.stroke = _pathStroke;
+				}
+			}
+			
+			public function changeFill():void {
+				if (_pathFill == null) return;
+				for each (var path1:Geometry in geometry) {
+					//					path1.fill = _pathFill;
+				}
+			}
+			
+			public function set svgStroke(value:com.degrafa.core.IGraphicsStroke):void {
+				_pathStroke = value;
+				changeStroke();
+			}
+			
+			public function set svgFill(value:com.degrafa.core.IGraphicsFill):void {
+				_pathFill = value;
+				changeFill();
+			}
+			
+			public function set svgWidth(value:Number):void 
+			{
+				_pathWidth = value;
+				width = value;
+				rescale();
+			}
+			
+			public function set svgHeight(value:Number):void 
+			{
+				_pathHeight = value;
+				height = value;
+				rescale();
+			}
+			
+			public function resizeAll():void {
+				
+				if (svgResized) {return;};
+				
+				var bound_rect:Rectangle = new Rectangle(99999999999, 99999999999, 0, 0);
+				
+				width = _pathWidth;
+				height = _pathHeight;
+				
+				_originalWidth = width;
+				_originalHeight = height;
+				
+				// Gather ranges
+				preDraw();
+				getCompositeBound(this, bound_rect);
+				// Calculate global transform parameters
+				var offset:Point = new Point(bound_rect.left, bound_rect.top);
+				var scale:Point = new Point(width / bound_rect.width, height / bound_rect.height); 
+				var scale_weight:Number = (scale.x + scale.y) / 2;
+				
+				setCompositeMatrix(this, bound_rect, offset, scale);
+				rescale();
+				svgResized = true;
+				//				this.draw(null, null);
+			}
+			
+			public function getCompositeBound(gc:GeometryComposition, rect:Rectangle):Rectangle
+			{
+				for each (var geo:Geometry in gc.geometryCollection.items)
+				{
+					if (geo is GeometryComposition)
+					{
+						rect = getCompositeBound(geo as GeometryComposition, rect);
+					} else
+					{
+						if (geo is Path) 
+						{
+							var my_path:Path = geo as Path;
+							my_path.preDraw();
+							if (rect.width < my_path.bounds.width) rect.width = my_path.bounds.width;
+							if (rect.height < my_path.bounds.height) rect.height = my_path.bounds.height;
+							if (rect.x > my_path.bounds.left) rect.x = my_path.bounds.left;
+							if (rect.y > my_path.bounds.top) rect.y = my_path.bounds.top;
+						}
+					}
+				}
+				
+				return rect;
+			}
+			
+			public function setCompositeMatrix(gc:GeometryComposition, rect:Rectangle, offset:Point, scale:Point):void
+			{
+				for each (var geo:Geometry in gc.geometryCollection.items)
+				{
+					if (geo is GeometryComposition)
+					{
+						setCompositeMatrix(geo as GeometryComposition, rect, offset, scale);
+					} else
+					{
+						if (geo is Path) 
+						{
+							var tm:MatrixTransform = new MatrixTransform();
+							tm.a=scale.x;
+							tm.b = 0;
+							tm.c = 0;
+							tm.d=scale.y;
+							
+							// Apply global offset along with local offset of each path
+							tm.tx=-offset.x - (geo.bounds.x - rect.left)* (1-scale.x);
+							tm.ty=-offset.y - (geo.bounds.y - rect.top)* (1- scale.y);
+							tm.registrationPoint = "topLeft";
+							
+							geo.transform = tm;
+							//					myPath.stroke.weight = myPath.stroke.weight * scale_weight; 
+							//							if (geo.stroke != null)	geo.stroke.weight = 1; 
+						}
+						
+					}
+				}
+			}
+		]]>
+	</mx:Script>
+	
+</degrafa:GeometryComposition>
+

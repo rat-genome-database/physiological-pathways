@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="400" height="620" xmlns:degrafa="com.degrafa.*"
+				creationComplete="init()" showCloseButton="true" xmlns:controls="edu.mcw.hmgc.rgd.ui.controls.*" close="titlewindow1_closeHandler(event)">
+	<mx:Script>
+		<![CDATA[
+			import edu.mcw.hmgc.rgd.utils.libraries.LinkLibrary;
+			
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			public function init():void
+			{
+				LinkLibrary.drawAllLinks(surface, canvas);
+				titleBar.buttonMode = true; 
+				titleBar.useHandCursor = true; 
+				titleTextField.mouseEnabled = false; 
+				
+			}
+
+			protected function titlewindow1_closeHandler(event:CloseEvent):void
+			{
+				PopUpManager.removePopUp(this);
+			}
+
+		]]>
+	</mx:Script>
+	<controls:Canvas id="canvas" x="0" y="0">
+		<degrafa:Surface id="surface" x="0" y="0" width="100%" height="100%">
+		</degrafa:Surface>
+	</controls:Canvas>
+</mx:TitleWindow>
